@@ -1,0 +1,25 @@
+{
+  "name": "slidev",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "slidev build",
+    "dev": "slidev --open",
+    "export": "slidev export",
+    "record": "node scripts/record-slidev.js",
+    "video": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record\""
+
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.16.0",
+    "@slidev/theme-default": "latest",
+    "@slidev/theme-seriph": "latest",
+    "vue": "^3.5.33"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "concurrently": "^10.0.3",
+    "playwright": "^1.61.0",
+    "wait-on": "^9.0.10"
+  }
+}

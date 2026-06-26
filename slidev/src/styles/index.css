@@ -1,0 +1,84 @@
+:root {
+  --canonical-aubergine: #772953;
+  --canonical-orange: #e95420;
+  --canonical-warm-grey: #aea79f;
+  --canonical-light-grey: #f7f7f7;
+  --canonical-dark: #111111;
+}
+
+.slidev-layout {
+  font-family: Ubuntu, Inter, system-ui, sans-serif;
+  color: var(--canonical-dark);
+  background: #fff;
+  padding: 64px 72px 56px 72px;
+}
+
+.slidev-layout::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  left: 36px;
+  width: 150px;
+  height: 32px;
+  #background-image: url("canonical.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: left center;
+}
+
+.slidev-layout::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--canonical-aubergine),
+    var(--canonical-orange)
+  );
+}
+
+h1 {
+  color: var(--canonical-aubergine);
+  font-weight: 700;
+  margin-top: 48px;
+}
+
+h2 {
+  color: var(--canonical-orange);
+}
+
+a {
+  color: var(--canonical-orange);
+}
+
+strong {
+  color: var(--canonical-aubergine);
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-left: 6px solid var(--canonical-orange);
+  border-radius: 12px;
+  padding: 1.2rem;
+  background: var(--canonical-light-grey);
+}
+
+.cover,
+.slidev-layout.cover {
+  background: var(--canonical-aubergine);
+  color: white;
+}
+
+.cover h1,
+.slidev-layout.cover h1 {
+  color: white;
+  font-size: 3.5rem;
+}
+
+.cover h2,
+.slidev-layout.cover h2 {
+  color: var(--canonical-orange);
+}
