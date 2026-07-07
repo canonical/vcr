@@ -1,4 +1,4 @@
-Output "/tmp/l9_install_snaps.mp4"
+Output "/tmp/l9_install_snaps.gif"
 Set Shell "bash"
 Set FontSize 22
 Set Width 1280
