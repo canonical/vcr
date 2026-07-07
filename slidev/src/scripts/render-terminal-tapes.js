@@ -95,7 +95,7 @@ function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath
   const encoded = Buffer.from(source, "utf8").toString("base64");
   const media = blockFormat === "gif"
     ? `![Terminal recording](${mediaPath})`
-    : `<video src="${mediaPath}" controls playsinline muted></video>`;
+    : `<video src="${mediaPath}" controls autoplay playsinline muted></video>`;
   return `${START} hash=${hash} format=${blockFormat} -->\n${media}\n<!-- sli-terminal:source\n${encoded}\n${END}`;
 }
 
