@@ -20,7 +20,7 @@
   left: 36px;
   width: 150px;
   height: 32px;
-  #background-image: url("canonical.png");
+  /* background-image: url("canonical.png"); */
   background-repeat: no-repeat;
   background-size: contain;
   background-position: left center;
