@@ -41,3 +41,25 @@ Useful options:
 - `pnpm run terminal:render -- --file slides.md` renders a different markdown file.
 - `pnpm run terminal:render -- --format gif` keeps the default output format as animated GIF for blocks without `format=`; pass `--format mp4` only to opt into MP4 output.
 - `pnpm run terminal:render -- --dry-run` reports what would change without writing files.
+
+## Speech audio in slides
+
+This project can also pre-render local text-to-speech narration into cached WAV files. Add a fenced `speech` or `tts` block to `slides.md`:
+
+````md
+```speech name=intro
+Welcome to the MicroCloud lesson. This narration is generated locally and cached.
+```
+````
+
+Run `pnpm run audio:render -- --model path/to/voice.onnx` (or the `speech:render` alias) or set `PIPER_MODEL=path/to/voice.onnx` before running the command. The command uses the local `piper` binary by default, writes WAV files under `audio-cache/`, and replaces each source block with an autoplaying background `<audio>` element. The original text is stored inside the generated markdown block, so re-running the command restores and re-renders changed narration text.
+
+Useful options:
+
+- `pnpm run audio:render -- --file slides.md` renders a different markdown file.
+- `pnpm run audio:render -- --cache-dir audio-cache` changes the cache directory.
+- `pnpm run audio:render -- --tts-bin piper` uses a different local Piper-compatible binary.
+- `pnpm run audio:render -- --dry-run` reports what would change without writing files.
+- `pnpm run audio:render -- --skip-render` updates markdown and writes placeholder cache files without invoking the TTS model.
+
+Browsers may delay audible autoplay until the deck receives a user gesture, but Slidev will load the generated track in the background when the slide is shown.
