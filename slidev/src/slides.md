@@ -172,8 +172,8 @@ After installing, we must prevent automatic updates to ensure consistency across
 The following recording runs the snap installation commands on <code>mc-01</code>.
 </p>
 
-```txt terminal format=mp4 name=install-snaps
-Output "/tmp/l9_install_snaps.mp4"
+```txt terminal name=install-snaps
+Output "/tmp/l9_install_snaps.gif"
 Set Shell "bash"
 Set FontSize 22
 Set Width 1280

@@ -1,4 +1,4 @@
-Output "/tmp/l9_check_resources.mp4"
+Output "/tmp/l9_check_resources.gif"
 Set Shell "bash"
 Set FontSize 22
 Set Width 1280
