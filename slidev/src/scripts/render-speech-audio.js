@@ -34,21 +34,23 @@ console.log(
 
 async function renderSpeechBlocks(input) {
   const withoutCached = stripCachedBlocks(input);
-  const fencePattern = /(^|\n)(```|~~~)([^\s`~]+)([^\n]*)\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/g;
+  const blockPattern = /(^|\n)(?:(```|~~~)([^\s`~]+)([^\n]*)\n([\s\S]*?)\n\2[ \t]*(?=\n|$)|<!--\n([\s\S]*?)\n-->)/g;
   let output = "";
   let lastIndex = 0;
   let rendered = 0;
   let reused = 0;
   let match;
 
-  while ((match = fencePattern.exec(withoutCached)) !== null) {
-    const [full, prefix, fence, language, meta, text] = match;
+  while ((match = blockPattern.exec(withoutCached)) !== null) {
+    const [full, prefix, fence, language, meta = "", fencedText, commentText] = match;
     const blockStart = match.index + prefix.length;
+    const source = withoutCached.slice(blockStart, match.index + full.length);
     output += withoutCached.slice(lastIndex, blockStart);
 
     const options = parseMeta(meta);
-    if (!isSpeechBlock(language, options)) {
-      output += withoutCached.slice(blockStart, match.index + full.length);
+    const text = fencedText ?? commentText;
+    if (!isSpeechSource({ language, options, commentText })) {
+      output += source;
       lastIndex = match.index + full.length;
       continue;
     }
@@ -73,7 +75,7 @@ async function renderSpeechBlocks(input) {
       reused += 1;
     }
 
-    output += buildCachedBlock({ language, meta: meta.trim(), text, hash, mediaPath });
+    output += buildCachedBlock({ source, hash, mediaPath });
     lastIndex = match.index + full.length;
   }
 
@@ -86,8 +88,7 @@ function stripCachedBlocks(input) {
   return input.replace(cachedPattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
 }
 
-function buildCachedBlock({ language, meta, text, hash, mediaPath }) {
-  const source = `\`\`\`${language}${meta ? ` ${meta}` : ""}\n${text}\n\`\`\``;
+function buildCachedBlock({ source, hash, mediaPath }) {
   const encoded = Buffer.from(source, "utf8").toString("base64");
   const audio = `<audio class="sli-speech-track" src="${mediaPath}" autoplay preload="auto"></audio>`;
   return `${START} hash=${hash} format=wav -->\n${audio}\n<!-- sli-speech:source\n${encoded}\n${END}`;
@@ -151,8 +152,16 @@ function parseMeta(meta) {
   return options;
 }
 
-function isSpeechBlock(language, options) {
-  return language === "speech" || language === "tts" || options.speech === true || options.tts === true;
+function isSpeechSource({ language, options, commentText }) {
+  if (language) {
+    return language === "speech" || language === "tts" || options.speech === true || options.tts === true;
+  }
+  return isNarrationComment(commentText);
+}
+
+function isNarrationComment(text) {
+  const trimmed = text.trim();
+  return trimmed.length > 0 && !/<[\w/!][\s\S]*>/.test(trimmed);
 }
 
 function hashText(text, modelName) {
