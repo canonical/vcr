@@ -6,8 +6,11 @@ To start the slide show:
 - `pnpm run dev`
 - visit <http://localhost:3030>
 - `pnpm run video` to record a video of the slides
+- `pnpm run video-animated` to capture a browser video recording when slides contain animated GIFs, MP4s, or other embedded media
 
 Edit the [slides.md](./slides.md) to see the changes.
+
+`pnpm run video-animated` starts Slidev and records the rendered browser viewport instead of relying on static slide images. Use it when animated GIFs or embedded MP4 elements need to keep moving in the exported recording. The command writes `videos/slidev-animated-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
 
 Learn more about Slidev at the [documentation](https://sli.dev/).
 
