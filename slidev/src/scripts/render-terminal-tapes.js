@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_MARKDOWN = "slides.md";
-const DEFAULT_CACHE_DIR = "public/terminal-cache";
+const DEFAULT_CACHE_DIR = "terminal-cache";
 const START = "<!-- sli-terminal:start";
 const END = "<!-- sli-terminal:end -->";
 
@@ -15,7 +15,7 @@ const projectRoot = path.resolve(__dirname, "..");
 
 const args = parseArgs(process.argv.slice(2));
 const markdownPath = path.resolve(projectRoot, args.file ?? DEFAULT_MARKDOWN);
-const cacheDir = path.resolve(projectRoot, args.cacheDir ?? DEFAULT_CACHE_DIR);
+const cacheDir = path.resolve(path.dirname(markdownPath), args.cacheDir ?? DEFAULT_CACHE_DIR);
 const format = normalizeFormat(args.format ?? "gif");
 const dryRun = Boolean(args.dryRun);
 const skipRender = Boolean(args.skipRender);
@@ -56,7 +56,7 @@ async function renderTerminalBlocks(input) {
     const hash = hashScript(script, blockFormat);
     const basename = `${options.name ? slug(options.name) + "-" : ""}${hash}.${blockFormat}`;
     const assetPath = path.join(cacheDir, basename);
-    const publicPath = `/${path.relative(path.join(projectRoot, "public"), assetPath).split(path.sep).join("/")}`;
+    const mediaPath = relativeMarkdownAssetPath(markdownPath, assetPath);
 
     const assetExists = await exists(assetPath);
     if (!assetExists || options.force) {
@@ -72,7 +72,7 @@ async function renderTerminalBlocks(input) {
       reused += 1;
     }
 
-    output += buildCachedBlock({ language, meta: meta.trim(), script, hash, blockFormat, publicPath });
+    output += buildCachedBlock({ language, meta: meta.trim(), script, hash, blockFormat, mediaPath });
     lastIndex = match.index + full.length;
   }
 
@@ -90,13 +90,18 @@ function stripCachedBlocks(input) {
   return input.replace(cachedPattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
 }
 
-function buildCachedBlock({ language, meta, script, hash, blockFormat, publicPath }) {
+function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath }) {
   const source = `\`\`\`${language}${meta ? ` ${meta}` : ""}\n${script}\n\`\`\``;
   const encoded = Buffer.from(source, "utf8").toString("base64");
   const media = blockFormat === "gif"
-    ? `![Terminal recording](${publicPath})`
-    : `<video src="${publicPath}" controls playsinline muted></video>`;
+    ? `![Terminal recording](${mediaPath})`
+    : `<video src="${mediaPath}" controls playsinline muted></video>`;
   return `${START} hash=${hash} format=${blockFormat} -->\n${media}\n<!-- sli-terminal:source\n${encoded}\n${END}`;
+}
+
+function relativeMarkdownAssetPath(markdownFile, assetPath) {
+  const relativePath = path.relative(path.dirname(markdownFile), assetPath).split(path.sep).join("/");
+  return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
 }
 
 async function renderWithVhs(script, assetPath, blockFormat, command) {
