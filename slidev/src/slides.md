@@ -36,7 +36,15 @@ Preparing Nodes for MicroCloud
 </div>
 -->
 <!--
-The last comment block of each slide will be treated as slide notes. It will be visible and editable in Presenter Mode along with the slide. [Read more in the docs](https://sli.dev/guide/syntax.html#notes)
+Before we initialise the cluster, we need to prepare each node.
+
+The process has four steps.
+First, we install the snaps — MicroCloud, LXD, MicroCeph, and MicroOVN.
+Second, we lock the snap versions so every node runs the same release.
+Third, we check the hardware — disks, network interfaces, and memory.
+Fourth and finally, we run a quick pre-flight check to make sure everything is ready.
+
+We will do this on the first node, mc-01. The same steps are repeated on mc-02 and mc-03 identically.
 -->
 
 ---
@@ -81,6 +89,18 @@ Perform these steps on the first node, <span v-mark.red="6"> mc-01 </span>. Repe
 
 </div>
 
+<!--
+Before we initialise the cluster, we need to prepare each node.
+
+The process has four steps.
+First, we install the snaps — MicroCloud, LXD, MicroCeph, and MicroOVN.
+Second, we lock the snap versions so every node runs the same release.
+Third, we check the hardware — disks, network interfaces, and memory.
+Fourth and finally, we run a quick pre-flight check to make sure everything is ready.
+
+We will do this on the first node, mc-01. The same steps are repeated on mc-02 and mc-03 identically.
+-->
+
 ---
 
 
@@ -113,7 +133,7 @@ We install snaps using the long-term support (LTS) channel for each component.
     <div class="font-mono text-xs opacity-60 mb-1">Microceph</div>
     <div>
       <ul>
-       <li>suid/stable</li>
+       <li>squid/stable</li>
        <li>Squid is the latest LTS Ceph release</li>
       </ul>
     </div>
@@ -131,6 +151,22 @@ We install snaps using the long-term support (LTS) channel for each component.
 <div v-click mt-12>
 Let's look at the installation command.
 </div>
+
+<!--
+Let us look at the installation command.
+
+We install four snaps using the long-term support channel for each component:
+- MicroCloud on the 2/stable channel, which is the current LTS track.
+- LXD on 5.21/stable, the LTS track for LXD.
+- MicroCeph on squid/stable — Squid is the latest LTS Ceph release.
+- MicroOVN on 24.03/stable, paired with the same Ubuntu release.
+
+Using LTS channels means the versions stay stable over time. There are no unexpected feature changes during a delivery.
+
+The installation takes about one minute per snap. On the three nodes you would do this in parallel, or through a configuration management tool.
+
+Once all four are installed, confirm with `snap list`.
+-->
 
 ---
 
@@ -163,6 +199,18 @@ After installing, we must prevent automatic updates to ensure consistency across
 <div v-click mt-12>
 <b>Verification</b>: Run <tt>snap list</tt> on every node. They should show identical versions, revisions, and channels.
 </div>
+
+<!--
+After installing, we must prevent automatic updates. By default, snaps auto-update when a new release is published — this is undesired for MicroCloud and its components.
+
+The official production workflow has two steps.
+
+First, install every snap with `--cohort="+"`. This pins all nodes to the same snap revision from the start. Even after a future refresh, the cohort key ensures every node updates to the same revision — no drifting.
+
+Second, run `snap hold` to prevent any automatic updates. This freezes all snaps at their current version until you explicitly unhold and refresh.
+
+We can verify the locked state with `snap list`. Every node should show the same version, revision, and channel.
+-->
 
 ---
 
@@ -248,6 +296,20 @@ Before initializing the cluster, we verify each node's hardware requirements.
 <div v-click mt-12>
 Once all checks pass, the nodes are ready for <tt>microcloud init</tt>
 </div>
+
+<!--
+Before we initialise the cluster, we must confirm that every node has the correct hardware.
+
+We need three things.
+
+First, dedicated disks for Ceph. These must be unformatted drives with no existing partitions or filesystems. MicroCeph will detect them automatically during initialisation. The operating system must be on a separate disk.
+
+Second, at least two network interfaces per member. One for external connectivity to the uplink network — this NIC must not have any IP addresses assigned, as MicroCloud requires the interface to be clear. The other NIC carries intra-cluster OVN tunnel traffic between members. MicroCloud assigns IPs to this interface automatically. Optionally, a third interface can be used for a dedicated OVN underlay network. For production, we recommend dual-port NICs with a minimum 10 GiB capacity. We can verify the interfaces with `ip a`.
+
+Third, enough memory and CPU. For a lab with three nodes, 8 GB of RAM and 4 cores per node are a minimum. In production, requirements start at 32 GB RAM and 8 cores per node.
+
+Once all checks pass, the nodes are ready for `microcloud init`.
+-->
 
 ---
 
