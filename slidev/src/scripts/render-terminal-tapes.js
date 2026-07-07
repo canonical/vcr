@@ -34,7 +34,7 @@ console.log(
 
 async function renderTerminalBlocks(input) {
   const withoutCached = stripCachedBlocks(input);
-  const fencePattern = /(^|\n)(```|~~~)(terminal|tape)([^\n]*)\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/g;
+  const fencePattern = /(^|\n)(```|~~~)([^\s`~]+)([^\n]*)\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/g;
   let output = "";
   let lastIndex = 0;
   let rendered = 0;
@@ -47,6 +47,11 @@ async function renderTerminalBlocks(input) {
     output += withoutCached.slice(lastIndex, blockStart);
 
     const options = parseMeta(meta);
+    if (!isTerminalBlock(language, options)) {
+      output += full;
+      lastIndex = match.index + full.length;
+      continue;
+    }
     const blockFormat = normalizeFormat(options.format ?? format);
     const hash = hashScript(script, blockFormat);
     const basename = `${options.name ? slug(options.name) + "-" : ""}${hash}.${blockFormat}`;
@@ -141,10 +146,17 @@ function parseMeta(meta) {
   const options = {};
   for (const token of meta.trim().split(/\s+/).filter(Boolean)) {
     const [key, rawValue] = token.split("=");
-    if (!rawValue) continue;
+    if (!rawValue) {
+      options[token] = true;
+      continue;
+    }
     options[key] = rawValue.replace(/^['"]|['"]$/g, "");
   }
   return options;
+}
+
+function isTerminalBlock(language, options) {
+  return language === "terminal" || language === "tape" || options.terminal === true || options.tape === true;
 }
 
 function normalizeFormat(value) {
