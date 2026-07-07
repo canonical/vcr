@@ -28,7 +28,7 @@ This project can pre-render [VHS](https://github.com/charmbracelet/vhs) tape scr
    ```
    ````
 
-   Use `format=mp4` when you want an MP4 `<video>` element instead of a GIF image. The optional `name=` value prefixes the cached file name.
+   Use `format=mp4` when you want an MP4 `<video>` element instead of a GIF image. Generated MP4 videos are muted and autoplay inline so they start without requiring a click. The optional `name=` value prefixes the cached file name.
 3. Run `pnpm run terminal:render`.
 
 The renderer executes each tape block with `vhs`, writes the generated media under `terminal-cache/` next to the markdown file, and replaces the source fence with a cached markdown block that Slidev can render directly. The original tape source is stored inside the markdown cache block, so running the command again can restore and re-render it when the script changes.
