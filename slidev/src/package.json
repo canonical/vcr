@@ -10,7 +10,9 @@
     "video": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record\"",
     "terminal:render": "node scripts/render-terminal-tapes.js",
     "record:animated": "node scripts/record-slidev-animated.js",
-    "video-animated": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record:animated\""
+    "video-animated": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record:animated\"",
+    "speech:render": "node scripts/render-speech-audio.js",
+    "audio:render": "node scripts/render-speech-audio.js"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",
