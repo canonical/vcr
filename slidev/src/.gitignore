@@ -5,5 +5,6 @@ dist
 .vite-inspect
 .remote-assets
 components.d.ts
+terminal-cache
 
 audio-cache
