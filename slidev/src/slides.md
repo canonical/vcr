@@ -280,20 +280,22 @@ export default async function ({ page }) {
 
 # How it's implemented
 
+VCR it's currently implemented as extensions for sli.dev project
+
 <div class="implementation-grid">
   <div class="implementation-card">
-    <img class="implementation-logo" src="https://sli.dev/logo-title.png" alt="sli.dev logo" />
+    <img class="implementation-logo" src="./slidev.png" alt="sli.dev logo" />
     <h2>sli.dev</h2>
     <p>Author the talk as Markdown-powered Slidev slides, mixing narrative, code, and embedded media in one deck.</p>
   </div>
   <div class="implementation-card">
-    <img class="implementation-logo" src="https://user-images.githubusercontent.com/42545625/198402537-12ca2f6c-0779-4eb8-a67c-8db9cb3df13c.png" alt="VHS logo" />
-    <h2>vhs</h2>
-    <p>Render terminal automation into cached media so command-line demos play reliably inside the presentation.</p>
+    <img class="implementation-logo" src="./vhs.png" alt="VHS logo" />
+    <h2>VHS</h2>
+    <p>Render terminal commands into cached media</p>
   </div>
   <div class="implementation-card">
-    <img class="implementation-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Playwright_Logo.svg/512px-Playwright_Logo.svg.png" alt="Playwright logo" />
-    <h2>playwright</h2>
+    <img class="implementation-logo" src="./playwright.svg" alt="Playwright logo" />
+    <h2>Playwright</h2>
     <p>Drive browsers automatically, capture interactions, and cache the resulting videos for deterministic playback.</p>
   </div>
 </div>
