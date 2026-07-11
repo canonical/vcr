@@ -154,26 +154,93 @@ A basic Playwright example
 
 ```js playwright name=basic-web-session width=1280 height=720
 export default async function ({ page }) {
+  await page.addInitScript(() => {
+    const installCursor = () => {
+      if (document.querySelector("[data-demo-cursor]")) return;
+
+      const cursor = document.createElement("div");
+      cursor.dataset.demoCursor = "true";
+      cursor.style.cssText = `
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 2147483647;
+        width: 28px;
+        height: 28px;
+        border: 3px solid #e95420;
+        border-radius: 999px;
+        background: rgb(233 84 32 / 18%);
+        box-shadow: 0 0 0 4px rgb(255 255 255 / 90%), 0 6px 18px rgb(0 0 0 / 35%);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+      `;
+      document.documentElement.append(cursor);
+
+      window.addEventListener("mousemove", event => {
+        cursor.style.left = `${event.clientX}px`;
+        cursor.style.top = `${event.clientY}px`;
+      }, { passive: true });
+
+      window.addEventListener("mousedown", () => {
+        cursor.style.transform = "translate(-50%, -50%) scale(0.72)";
+      });
+      window.addEventListener("mouseup", () => {
+        cursor.style.transform = "translate(-50%, -50%)";
+      });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", installCursor, { once: true });
+    } else {
+      installCursor();
+    }
+  });
+
+  const pause = (ms = 900) => page.waitForTimeout(ms);
+  const targetPoint = async locator => {
+    const box = await locator.boundingBox();
+    if (!box) throw new Error("Could not find target on screen");
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const moveTo = async locator => {
+    const point = await targetPoint(locator);
+    await page.mouse.move(point.x, point.y, { steps: 40 });
+    await pause(700);
+    return point;
+  };
+  const clickLikeHuman = async locator => {
+    const point = await moveTo(locator);
+    await page.mouse.down();
+    await pause(180);
+    await page.mouse.up();
+    await pause(1200);
+    return point;
+  };
+
   await page.goto("https://docs.ubuntu.com/");
   await page.waitForLoadState("domcontentloaded");
+  await page.mouse.move(120, 120, { steps: 20 });
+  await pause(1200);
 
   const jujuLink = page.getByRole("link", { name: /^juju$/i }).first();
   await jujuLink.waitFor();
-  await jujuLink.hover();
-  await page.waitForTimeout(500);
-  await jujuLink.click();
+  await clickLikeHuman(jujuLink);
   await page.waitForLoadState("domcontentloaded");
+  await pause(1500);
 
   const tutorialLink = page.getByRole("link", { name: /try the juju tutorial/i }).first();
   await tutorialLink.waitFor();
   await tutorialLink.scrollIntoViewIfNeeded();
-  await tutorialLink.hover();
-  await page.waitForTimeout(500);
-  await tutorialLink.click();
+  await pause(900);
+  await clickLikeHuman(tutorialLink);
   await page.waitForLoadState("domcontentloaded");
+  await pause(1500);
 
-  await page.mouse.wheel(0, 900);
-  await page.waitForTimeout(2000);
+  for (const delta of [220, 220, 220, 220]) {
+    await page.mouse.wheel(0, delta);
+    await pause(500);
+  }
+  await pause(3000);
 }
 ```
 
