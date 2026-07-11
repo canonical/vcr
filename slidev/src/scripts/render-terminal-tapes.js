@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "terminal-cache";
 const START = "<!-- sli-terminal:start";
+const SOURCE = "<!-- sli-terminal:source -->";
 const END = "<!-- sli-terminal:end -->";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,17 +87,19 @@ async function renderTerminalBlocks(input) {
 }
 
 function stripCachedBlocks(input) {
-  const cachedPattern = /<!-- sli-terminal:start[\s\S]*?<!-- sli-terminal:source\n([\s\S]*?)\n<!-- sli-terminal:end -->/g;
-  return input.replace(cachedPattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
+  const clearTextPattern = /<!-- sli-terminal:start[\s\S]*?<!-- sli-terminal:source -->\n([\s\S]*?)\n<!-- sli-terminal:end -->/g;
+  const withoutClearText = input.replace(clearTextPattern, (_block, source) => source);
+
+  const legacyBase64Pattern = /<!-- sli-terminal:start[\s\S]*?<!-- sli-terminal:source\n([\s\S]*?)\n<!-- sli-terminal:end -->/g;
+  return withoutClearText.replace(legacyBase64Pattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
 }
 
 function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath }) {
   const source = `\`\`\`${language}${meta ? ` ${meta}` : ""}\n${script}\n\`\`\``;
-  const encoded = Buffer.from(source, "utf8").toString("base64");
   const media = blockFormat === "gif"
     ? `![Terminal recording](${mediaPath})`
     : `<video src="${mediaPath}" controls autoplay playsinline muted></video>`;
-  return `${START} hash=${hash} format=${blockFormat} -->\n${media}\n<!-- sli-terminal:source\n${encoded}\n${END}`;
+  return `${START} hash=${hash} format=${blockFormat} -->\n${media}\n${SOURCE}\n${source}\n${END}`;
 }
 
 function relativeMarkdownAssetPath(markdownFile, assetPath) {
