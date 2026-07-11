@@ -121,6 +121,8 @@ A basic terminal example
 <!-- sli-terminal:start hash=fbdece556194 format=gif -->
 ![Terminal recording](./terminal-cache/basic-terminal-fbdece556194.gif)
 <!-- sli-terminal:source -->
+
+
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
 Set Shell "bash"
@@ -156,6 +158,9 @@ Sleep 30s
 
 A basic Playwright example
 
+<!-- sli-playwright:start hash=04c91987bf1e format=webm -->
+<video src="./playwright-cache/basic-web-session-04c91987bf1e.webm" controls autoplay playsinline muted loop></video>
+<!-- sli-playwright:source -->
 ```js playwright name=basic-web-session width=1280 height=720
 export default async function ({ page }) {
   await page.addInitScript(() => {
@@ -226,17 +231,9 @@ export default async function ({ page }) {
   await page.mouse.move(120, 120, { steps: 20 });
   await pause(1200);
 
-  const jujuLink = page.getByRole("link", { name: /^juju$/i }).first();
+  const jujuLink = page.getByRole("link", { name: /^LXD$/i }).first();
   await jujuLink.waitFor();
   await clickLikeHuman(jujuLink);
-  await page.waitForLoadState("domcontentloaded");
-  await pause(1500);
-
-  const tutorialLink = page.getByRole("link", { name: /try\ the\ juju\ tutorial/i }).first();
-  await tutorialLink.waitFor();
-  await tutorialLink.scrollIntoViewIfNeeded();
-  await pause(900);
-  await clickLikeHuman(tutorialLink);
   await page.waitForLoadState("domcontentloaded");
   await pause(1500);
 
@@ -247,6 +244,7 @@ export default async function ({ page }) {
   await pause(3000);
 }
 ```
+<!-- sli-playwright:end -->
 
 ---
 
