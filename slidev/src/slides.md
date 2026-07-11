@@ -143,7 +143,7 @@ Sleep 3s
 Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
-
+Sleep 30s
 ```
 
 ---
