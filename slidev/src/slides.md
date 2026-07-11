@@ -128,19 +128,19 @@ Set Theme Dracula
 Set Padding 32
 Set Framerate 30
 
-Type echo '=== some terminal commands ==='
+Type "echo '=== some terminal commands ==='"
 Sleep 300ms
 Enter 1
 Sleep 1s
-Type uname -a
+Type "uname -a"
 Sleep 400ms
 Enter 1
 Sleep 3s
-Type whoami
+Type "whoami"
 Sleep 400ms
 Enter 1
 Sleep 3s
-Type gemma4 list-engines
+Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
 
