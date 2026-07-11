@@ -228,7 +228,7 @@ export default async function ({ page }) {
   await page.waitForLoadState("domcontentloaded");
   await pause(1500);
 
-  const tutorialLink = page.getByRole("link", { name: /try the juju tutorial/i }).first();
+  const tutorialLink = page.getByRole("link", { name: /try\ the\ juju\ tutorial/i }).first();
   await tutorialLink.waitFor();
   await tutorialLink.scrollIntoViewIfNeeded();
   await pause(900);
