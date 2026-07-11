@@ -6,5 +6,6 @@ dist
 .remote-assets
 components.d.ts
 terminal-cache
+playwright-cache
 
 audio-cache
