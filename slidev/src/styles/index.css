@@ -82,3 +82,57 @@ strong {
 .slidev-layout.cover h2 {
   color: var(--canonical-orange);
 }
+
+.implementation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.2rem;
+  margin-top: 3rem;
+}
+
+.implementation-card {
+  min-height: 300px;
+  border: 1px solid #e7e4e2;
+  border-radius: 22px;
+  padding: 1.6rem;
+  background: linear-gradient(180deg, #ffffff 0%, var(--canonical-light-grey) 100%);
+  box-shadow: 0 18px 45px rgb(17 17 17 / 0.08);
+}
+
+.implementation-card h2 {
+  margin: 1.2rem 0 0.75rem;
+  font-size: 1.75rem;
+}
+
+.implementation-card p {
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.implementation-logo {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  color: white;
+  font-weight: 800;
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+}
+
+.slidev-logo {
+  background: linear-gradient(135deg, #41b883, #34495e);
+}
+
+.vcs-logo {
+  background: linear-gradient(135deg, var(--canonical-aubergine), var(--canonical-orange));
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+}
+
+.playwright-logo {
+  background: linear-gradient(135deg, #2ead33, #d65348);
+  font-size: 1.35rem;
+  letter-spacing: 0.01em;
+}
