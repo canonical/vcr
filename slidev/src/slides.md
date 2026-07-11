@@ -280,9 +280,24 @@ export default async function ({ page }) {
 
 # How it's implemented
 
+<div class="implementation-grid">
+  <div class="implementation-card">
+    <div class="implementation-logo slidev-logo">S</div>
+    <h2>sli.dev</h2>
+    <p>Author the talk as Markdown-powered Slidev slides, mixing narrative, code, and embedded media in one deck.</p>
+  </div>
+  <div class="implementation-card">
+    <div class="implementation-logo vcs-logo">VCS</div>
+    <h2>vcs</h2>
+    <p>Keep examples, scripts, and generated assets versioned so recordings are reproducible and easy to review.</p>
+  </div>
+  <div class="implementation-card">
+    <div class="implementation-logo playwright-logo">PW</div>
+    <h2>playwright</h2>
+    <p>Drive browsers automatically, capture interactions, and cache the resulting videos for deterministic playback.</p>
+  </div>
+</div>
 
-
--
 ---
 
 # What's missing
