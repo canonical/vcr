@@ -152,4 +152,22 @@ Sleep 30s
 
 ---
 
+# A web session
+
+A basic Playwright example
+
+```js playwright name=basic-web-session width=1280 height=720
+export default async function ({ page }) {
+  await page.goto("https://example.com");
+  await page.getByRole("heading", { name: "Example Domain" }).waitFor();
+  await page.mouse.move(250, 250);
+  await page.waitForTimeout(700);
+  await page.getByRole("link", { name: "More information..." }).click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1200);
+}
+```
+
+---
+
 Thanks!
