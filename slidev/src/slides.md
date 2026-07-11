@@ -266,7 +266,7 @@ export default async function ({ page }) {
 <!-- sli-playwright:end -->
 ---
 
-# Audio
+# Speech/subtitles
 
 
 
@@ -282,7 +282,7 @@ export default async function ({ page }) {
 
 
 
--
+
 ---
 
 # What's missing
