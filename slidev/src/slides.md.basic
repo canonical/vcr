@@ -34,7 +34,7 @@ We need to produce and maintain enablement courses for our partners.
 <ul>
    <li>Need to record terminal sessions</li>
    <li>Need to record web sessions with UI</li>
-   <li>Need to be in different languages</li>
+   <li>Need to be in different languages (slides/speech)</li>
    <li>Some modules may be present in different enablement courses</li>
 </ul>
 
@@ -245,7 +245,43 @@ export default async function ({ page }) {
 }
 ```
 <!-- sli-playwright:end -->
+---
+
+# Audio
+
+
 
 ---
 
-Thanks!
+# Two ways of using it
+## Interactive and not interactive
+
+
+---
+
+# How it's implemented
+
+
+
+-
+---
+
+# What's missing
+
+
+---
+
+# AI Friendliness
+
+
+
+---
+
+#  Call to Action
+
+
+
+
+---
+
+# Thanks!
