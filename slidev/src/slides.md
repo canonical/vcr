@@ -282,17 +282,26 @@ export default async function ({ page }) {
 
 <div class="implementation-grid">
   <div class="implementation-card">
-    <div class="implementation-logo slidev-logo">S</div>
+    <div class="implementation-logo slidev-logo" aria-label="sli.dev logo">
+      <span class="slidev-logo-mark slidev-logo-square"></span>
+      <span class="slidev-logo-mark slidev-logo-circle"></span>
+      <span class="slidev-logo-mark slidev-logo-triangle"></span>
+    </div>
     <h2>sli.dev</h2>
     <p>Author the talk as Markdown-powered Slidev slides, mixing narrative, code, and embedded media in one deck.</p>
   </div>
   <div class="implementation-card">
-    <div class="implementation-logo vcs-logo">VCS</div>
-    <h2>vcs</h2>
-    <p>Keep examples, scripts, and generated assets versioned so recordings are reproducible and easy to review.</p>
+    <div class="implementation-logo vhs-logo" aria-label="VHS logo">
+      <span>VHS</span>
+    </div>
+    <h2>vhs</h2>
+    <p>Render terminal automation into cached media so command-line demos play reliably inside the presentation.</p>
   </div>
   <div class="implementation-card">
-    <div class="implementation-logo playwright-logo">PW</div>
+    <div class="implementation-logo playwright-logo" aria-label="Playwright logo">
+      <span class="playwright-face playwright-face-green"></span>
+      <span class="playwright-face playwright-face-red"></span>
+    </div>
     <h2>playwright</h2>
     <p>Drive browsers automatically, capture interactions, and cache the resulting videos for deterministic playback.</p>
   </div>
