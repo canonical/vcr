@@ -114,10 +114,13 @@ Let's look at an <tt>example</tt>!
 ---
 
 
-# A terminal session 
+# A terminal session
 
 A basic terminal example
 
+<!-- sli-terminal:start hash=fbdece556194 format=gif -->
+![Terminal recording](./terminal-cache/basic-terminal-fbdece556194.gif)
+<!-- sli-terminal:source -->
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
 Set Shell "bash"
@@ -132,7 +135,7 @@ Type "echo '=== some terminal commands ==='"
 Sleep 300ms
 Enter 1
 Sleep 1s
-Type "uname -a"
+Type "uname"
 Sleep 400ms
 Enter 1
 Sleep 3s
@@ -145,6 +148,7 @@ Sleep 400ms
 Enter 1
 Sleep 30s
 ```
+<!-- sli-terminal:end -->
 
 ---
 
