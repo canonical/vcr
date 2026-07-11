@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
-  <title id="title">Placeholder portrait for Ugo Landini</title>
-  <desc id="desc">Circular orange placeholder avatar with the initials UL.</desc>
-  <rect width="320" height="320" rx="160" fill="#f7e6df"/>
-  <circle cx="160" cy="122" r="58" fill="#e95420" opacity="0.9"/>
-  <path d="M64 292c14-65 55-103 96-103s82 38 96 103" fill="#e95420" opacity="0.9"/>
-  <text x="160" y="178" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="700" fill="#fff">UL</text>
-</svg>
