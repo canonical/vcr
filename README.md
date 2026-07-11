@@ -42,6 +42,41 @@ Useful options:
 - `pnpm run terminal:render -- --format gif` keeps the default output format as animated GIF for blocks without `format=`; pass `--format mp4` only to opt into MP4 output.
 - `pnpm run terminal:render -- --dry-run` reports what would change without writing files.
 
+## Playwright browser recordings in slides
+
+Use the Playwright renderer when a slide needs a cached recording of browser automation, such as clicking through a web UI or demonstrating an interaction that should replay consistently during a presentation.
+
+1. Install dependencies and Playwright browsers:
+
+   ```sh
+   pnpm install
+   pnpm exec playwright install chromium
+   ```
+
+2. Add a fenced `playwright` block to `slides.md`. The block must export either a default function or a named `run` function. The renderer passes `{ page, context, browser, output }` to the function and records the browser context as WebM:
+
+   ````md
+   ```playwright name=demo width=1280 height=720
+   export default async function ({ page }) {
+     await page.goto("https://example.com");
+     await page.getByRole("heading", { name: "Example Domain" }).waitFor();
+     await page.waitForTimeout(1000);
+   }
+   ```
+   ````
+
+3. Run `pnpm run playwright:render`.
+
+The renderer writes generated WebM files under `playwright-cache/` next to the markdown file and replaces each source fence with a cached `<video>` block that autoplays muted, loops, and keeps the original Playwright source in the markdown. Re-running the command restores and re-renders changed source blocks, while unchanged cached videos are reused.
+
+Useful options:
+
+- `pnpm run playwright:render -- --file slides.md` renders a different markdown file.
+- `pnpm run playwright:render -- --cache-dir playwright-cache` changes the cache directory.
+- Add `name=demo` to prefix the generated file name, `width=1280` or `height=720` to change the recording size, and `force` to regenerate an existing cached recording.
+- `pnpm run playwright:render -- --dry-run` reports what would change without writing files.
+- `pnpm run playwright:render -- --skip-render` updates markdown and writes placeholder cache files without launching Chromium.
+
 ## Speech audio in slides
 
 This project can also pre-render local text-to-speech narration into cached WAV files. Add a fenced `speech` or `tts` block to `slides.md`:
