@@ -27,6 +27,27 @@ duration: 35min
 transition: fade-out
 ---
 
+# Who we are
+
+## FE Engineering Alliance team
+
+<div class="grid grid-cols-2 gap-8 mt-10">
+  <div v-click class="p-6 rounded-xl border border-primary/30 bg-primary/10 text-left">
+    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" src="/ugo-landini-placeholder.svg" alt="Placeholder portrait for Ugo Landini" />
+    <h3 class="text-2xl font-bold text-center">Ugo Landini</h3>
+    <p class="mt-4 text-lg opacity-80">FE Engineering Alliance team member focused on helping partners and teams turn technical knowledge into reusable enablement.</p>
+  </div>
+  <div v-click class="p-6 rounded-xl border border-primary/30 bg-primary/10 text-left">
+    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" src="/dave-ahearn-placeholder.svg" alt="Placeholder portrait for Dave Ahearn" />
+    <h3 class="text-2xl font-bold text-center">Dave Ahearn</h3>
+    <p class="mt-4 text-lg opacity-80">FE Engineering Alliance team member focused on scalable training workflows, demos, and partner-facing engineering enablement.</p>
+  </div>
+</div>
+
+---
+transition: fade-out
+---
+
 # The problem
 
 We need to produce and maintain enablement courses for our partners.
