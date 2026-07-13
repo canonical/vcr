@@ -230,7 +230,4 @@ if (preciseTiming.file && preciseTiming.durations.length > step) {
   console.warn(`Ignored ${preciseTiming.durations.length - step} unused duration(s) from ${preciseTiming.file}`);
 }
 
-console.log(`Video written to ${outputPath}`);
-console.log();
-console.log("Convert to MP4 with:");
 console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);
