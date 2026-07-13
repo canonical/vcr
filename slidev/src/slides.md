@@ -4,7 +4,7 @@ title: VCR
 info: |
   ## VCR Presentation
   Learn more at [VCR](https://github.com/canonical/vcr)
-class: text-center
+class: cover text-center
 # https://sli.dev/features/drawing
 drawings:
   persist: false
