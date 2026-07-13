@@ -68,13 +68,8 @@ strong {
 
 .cover,
 .slidev-layout.cover {
-  background: var(--canonical-orange);
+  background: var(--canonical-dark);
   color: #fff;
-}
-
-.cover::before,
-.slidev-layout.cover::before {
-  content: none;
 }
 
 .cover::after,
