@@ -6,40 +6,41 @@ const SLIDEV_URL = process.env.SLIDEV_URL ?? "http://localhost:3030";
 const OUT_DIR = process.env.VIDEO_OUT_DIR ?? "videos";
 const OUTPUT_NAME = process.env.VIDEO_OUTPUT_NAME ?? "slidev-animated-recording.webm";
 const VIEWPORT = { width: 1920, height: 1080 };
+const DEFAULT_STEP_DURATION_MS = 1000;
+const ADVANCE_SETTLE_MS = 500;
 
-const timeline = [
-  { name: "title", wait: 3000 },
-  { name: "roadmap", wait: 2000 },
-  { name: "roadmap - install steps", wait: 4000 },
-  { name: "roadmap - lock versions", wait: 4000 },
-  { name: "roadmap - hardware check", wait: 4000 },
-  { name: "roadmap - preflight check", wait: 4000 },
-  { name: "roadmap - perform 1", wait: 2000 },
-  { name: "roadmap - perform 2", wait: 2000 },
-  { name: "roadmap - perform 3", wait: 2000 },
-  { name: "install-snaps", wait: 2000 },
-  { name: "install-snaps microcloud", wait: 4000 },
-  { name: "install-snaps lxd", wait: 4000 },
-  { name: "install-snaps microceph", wait: 4000 },
-  { name: "install-snaps microovn", wait: 4000 },
-  { name: "install-snaps installation", wait: 2000 },
-  { name: "lock-versions", wait: 2000 },
-  { name: "lock-versions - cohort", wait: 4000 },
-  { name: "lock-versions - updates", wait: 4000 },
-  { name: "lock-versions - verification", wait: 2000 },
-  { name: "installing", wait: 1000 },
-  { name: "installing - video", wait: 10000 },
-  { name: "installing 2", wait: 1000 },
-  { name: "installing 2 - video", wait: 10000 },
-  { name: "hardware", wait: 2000 },
-  { name: "hardware - dedicated", wait: 4000 },
-  { name: "hardware - network", wait: 4000 },
-  { name: "hardware - cpu", wait: 4000 },
-  { name: "hardware - microcloud init", wait: 2000 },
-  { name: "hardware-demo", wait: 1000 },
-  { name: "hardware-demo - video", wait: 10000 },
-  { name: "thanks", wait: 2000 }
-];
+function parseDuration(value, source) {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = String(value).trim().match(/^(\d+(?:\.\d+)?)(ms|s)?$/i);
+  if (!match) {
+    throw new Error(`${source} must be a positive duration such as 1000, 1000ms, or 1s`);
+  }
+
+  const amount = Number.parseFloat(match[1]);
+  const unit = match[2]?.toLowerCase() ?? "ms";
+  const duration = unit === "s" ? amount * 1000 : amount;
+
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error(`${source} must be greater than 0`);
+  }
+
+  return Math.round(duration);
+}
+
+function readStepDuration() {
+  const durationArg = process.argv.find(arg => arg.startsWith("--duration="));
+  const stepDurationArg = process.argv.find(arg => arg.startsWith("--step-duration="));
+  const arg = durationArg ?? stepDurationArg;
+
+  return parseDuration(arg?.split("=")[1], arg?.split("=")[0])
+    ?? parseDuration(process.env.ANIMATED_STEP_DURATION_MS, "ANIMATED_STEP_DURATION_MS")
+    ?? DEFAULT_STEP_DURATION_MS;
+}
+
+const stepDuration = readStepDuration();
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
@@ -62,10 +63,27 @@ const page = await context.newPage();
 await page.goto(SLIDEV_URL, { waitUntil: "networkidle" });
 
 await page.keyboard.press("Home");
-await page.waitForTimeout(1000);
+await page.waitForTimeout(ADVANCE_SETTLE_MS);
 
-async function prepareAnimatedMedia() {
-  return page.evaluate(async () => {
+async function getSlideState() {
+  return page.evaluate(() => {
+    const visible = element => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+    };
+
+    const visibleSlides = Array.from(document.querySelectorAll(".slidev-page, [data-slidev-no]"))
+      .filter(visible)
+      .map(slide => slide.getAttribute("data-slidev-no") ?? slide.id ?? slide.textContent?.trim().slice(0, 80) ?? "")
+      .join("|");
+
+    return `${window.location.href}::${visibleSlides}`;
+  });
+}
+
+async function waitForAnimatedMedia(stepDurationMs) {
+  return page.evaluate(async duration => {
     const visible = element => {
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -76,36 +94,60 @@ async function prepareAnimatedMedia() {
     await Promise.all(images.map(image => image.decode?.().catch(() => undefined)));
 
     const videos = Array.from(document.querySelectorAll("video")).filter(visible);
+
+    if (videos.length === 0) {
+      await new Promise(resolve => window.setTimeout(resolve, duration));
+      return { images: images.length, videos: 0, waitedForVideo: false };
+    }
+
     await Promise.all(videos.map(video => new Promise(resolve => {
       video.muted = true;
       video.playsInline = true;
-      video.loop = video.loop || !video.controls;
-      video.currentTime = 0;
+      video.loop = false;
 
-      const finish = () => resolve();
-      const play = () => video.play().then(finish, finish);
+      const finish = () => {
+        video.removeEventListener("ended", finish);
+        video.removeEventListener("error", finish);
+        resolve();
+      };
+
+      const playToEnd = () => {
+        video.currentTime = 0;
+        video.addEventListener("ended", finish, { once: true });
+        video.addEventListener("error", finish, { once: true });
+        video.play().catch(finish);
+      };
 
       if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        play();
+        playToEnd();
         return;
       }
 
-      video.addEventListener("loadeddata", play, { once: true });
+      video.addEventListener("loadeddata", playToEnd, { once: true });
       video.load();
-      window.setTimeout(finish, 2000);
     })));
 
-    return { images: images.length, videos: videos.length };
-  });
+    return { images: images.length, videos: videos.length, waitedForVideo: true };
+  }, stepDurationMs);
 }
 
-for (const step of timeline) {
-  const media = await prepareAnimatedMedia();
+let step = 1;
+while (true) {
+  const beforeAdvance = await getSlideState();
+  const media = await waitForAnimatedMedia(stepDuration);
   const mediaLabel = media.images || media.videos ? ` (${media.images} images, ${media.videos} videos)` : "";
-  console.log(`Recording slide: ${step.name}${mediaLabel}`);
-  await page.waitForTimeout(step.wait);
+  const waitLabel = media.waitedForVideo ? "video duration" : `${stepDuration}ms`;
+  console.log(`Recording step ${step}${mediaLabel}; waited ${waitLabel}`);
+
   await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(ADVANCE_SETTLE_MS);
+
+  const afterAdvance = await getSlideState();
+  if (afterAdvance === beforeAdvance) {
+    break;
+  }
+
+  step += 1;
 }
 
 await context.close();
