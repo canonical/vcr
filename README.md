@@ -10,7 +10,7 @@ To start the slide show:
 
 Edit the [slides.md](./slides.md) to see the changes.
 
-`pnpm run video-animated` starts Slidev and records the rendered browser viewport instead of relying on static slide images. Use it when animated GIFs or embedded MP4 elements need to keep moving in the exported recording. The recorder advances slides and click steps every 1 second by default, waits for visible `<video>` elements to finish before advancing, and accepts `--duration=1500`, `--duration=1.5s`, or `ANIMATED_STEP_DURATION_MS=1500` to adjust the non-video step duration. The command writes `videos/slidev-animated-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
+`pnpm run video-animated` starts Slidev and records the rendered browser viewport instead of relying on static slide images. Use it when animated GIFs or embedded MP4 elements need to keep moving in the exported recording. The recorder advances slides and click steps every 1 second by default, waits for visible `<video>` elements to finish before advancing, uses cached terminal GIF duration metadata when available, and accepts `--duration=1500`, `--duration=1.5s`, or `ANIMATED_STEP_DURATION_MS=1500` to adjust the fallback non-video step duration. The command writes `videos/slidev-animated-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
 
 Learn more about Slidev at the [documentation](https://sli.dev/).
 
@@ -34,7 +34,7 @@ This project can pre-render [VHS](https://github.com/charmbracelet/vhs) tape scr
    Blocks without `format=` render as animated GIFs. Use `format=mp4` only when you explicitly want an MP4 `<video>` element instead of the default GIF image. Generated MP4 videos are muted and autoplay inline so they start without requiring a click. The optional `name=` value prefixes the cached file name.
 3. Run `pnpm run terminal:render`.
 
-The renderer executes each tape block with `vhs`, writes the generated media under `terminal-cache/` next to the markdown file, and replaces the source fence with a cached markdown block that Slidev can render directly. The original tape source is stored inside the markdown cache block, so running the command again can restore and re-render it when the script changes.
+The renderer executes each tape block with `vhs`, writes the generated media under `terminal-cache/` next to the markdown file, and replaces the source fence with a cached markdown block that Slidev can render directly. When `ffprobe` is available, the renderer records the exact generated media duration as markdown metadata so `pnpm run video-animated` can wait for terminal GIFs to finish before advancing. The original tape source is stored inside the markdown cache block, so running the command again can restore and re-render it when the script changes.
 
 Useful options:
 

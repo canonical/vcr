@@ -93,11 +93,14 @@ async function waitForAnimatedMedia(stepDurationMs) {
     const images = Array.from(document.images).filter(visible);
     await Promise.all(images.map(image => image.decode?.().catch(() => undefined)));
 
+    const imageDuration = Math.max(0, ...images.map(image => readCachedDuration(image)).filter(Number.isFinite));
+    const fallbackDuration = imageDuration || duration;
+
     const videos = Array.from(document.querySelectorAll("video")).filter(visible);
 
     if (videos.length === 0) {
-      await new Promise(resolve => window.setTimeout(resolve, duration));
-      return { images: images.length, videos: 0, waitedForVideo: false };
+      await new Promise(resolve => window.setTimeout(resolve, fallbackDuration));
+      return { images: images.length, videos: 0, waitedForVideo: false, waitedForImage: imageDuration > 0, duration: fallbackDuration };
     }
 
     await Promise.all(videos.map(video => new Promise(resolve => {
@@ -127,7 +130,27 @@ async function waitForAnimatedMedia(stepDurationMs) {
       video.load();
     })));
 
-    return { images: images.length, videos: videos.length, waitedForVideo: true };
+    return { images: images.length, videos: videos.length, waitedForVideo: true, waitedForImage: false, duration: undefined };
+
+    function readCachedDuration(element) {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT);
+      let previousTerminalComment;
+      let node;
+
+      while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.COMMENT_NODE && node.nodeValue.includes("sli-terminal:start")) {
+          previousTerminalComment = node.nodeValue;
+          continue;
+        }
+
+        if (node === element) {
+          const match = previousTerminalComment?.match(/(?:^|\s)durationMs=(\d+)(?:\s|$)/);
+          return match ? Number.parseInt(match[1], 10) : undefined;
+        }
+      }
+
+      return undefined;
+    }
   }, stepDurationMs);
 }
 
@@ -136,7 +159,7 @@ while (true) {
   const beforeAdvance = await getSlideState();
   const media = await waitForAnimatedMedia(stepDuration);
   const mediaLabel = media.images || media.videos ? ` (${media.images} images, ${media.videos} videos)` : "";
-  const waitLabel = media.waitedForVideo ? "video duration" : `${stepDuration}ms`;
+  const waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;
   console.log(`Recording step ${step}${mediaLabel}; waited ${waitLabel}`);
 
   await page.keyboard.press("ArrowRight");
