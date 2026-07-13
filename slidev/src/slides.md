@@ -50,17 +50,19 @@ transition: fade-out
 
 We need to produce and maintain enablement courses for our partners.
 
-- Need to record <tt>terminal</tt> sessions
-- Need to record <tt>web</tt> sessions with UI
-- Need to be in <tt>different</tt> languages (slides/speech)
-- Some modules may be present in <tt>different</tt> enablement courses
-- Recording a course is time consuming, so cost is <tt>very high</tt>
-- Current courses are often recorded live sessions, <tt>not studio-quality</tt>
+For a good product course, you usually need to do several things:
 
+- to record <tt>terminal</tt> sessions
+- to record <tt>web</tt> sessions with UI
+- to localize slides in <tt>different</tt> languages
+- to reuse existing modules with <tt>same</tt> content
 
 <div v-click mt-12>
+Issues:
 
-The worst thing is that to maintain the material up to date, it's necessary to <span v-mark.circle.orange="2">  RE-RECORD  </span> portion of the videos each time something changes
+- Recording a course is time consuming, so cost is <tt>very high</tt>
+- Current courses are often recorded live sessions, <tt>not studio-quality</tt>
+- The worst thing is that to maintain the material up to date, it's necessary to <span v-mark.circle.orange="2">  RE-RECORD  </span> portion of the videos each time something changes
 
 </div>
 
@@ -138,8 +140,8 @@ Let's look at an <tt>example</tt>!
 Let's do some random terminal commands
 
 
-<!-- sli-terminal:start hash=87def30b3764 format=gif -->
-<img :src="'/terminal-cache/basic-terminal-87def30b3764.gif'" alt="Terminal recording" />
+<!-- sli-terminal:start hash=26768b0c2579 format=gif -->
+![Terminal recording](./terminal-cache/basic-terminal-26768b0c2579.gif)
 <!-- sli-terminal:source -->
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
@@ -166,7 +168,7 @@ Sleep 3s
 Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
-Sleep 30s
+Sleep 10s
 ```
 <!-- sli-terminal:end -->
 
@@ -179,6 +181,8 @@ Let's have a look at LXD documentation
 <!-- sli-playwright:start hash=04c91987bf1e format=webm -->
 <video :src="'/playwright-cache/basic-web-session-04c91987bf1e.webm'" controls autoplay playsinline muted loop></video>
 <!-- sli-playwright:source -->
+
+
 
 ```js playwright name=basic-web-session width=1280 height=720
 export default async function ({ page }) {
