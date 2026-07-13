@@ -18,9 +18,9 @@
   position: absolute;
   top: 24px;
   left: 36px;
-  width: 150px;
-  height: 40px;
-  background-image: url("/canonical-logo.svg");
+  width: 180px;
+  height: 48px;
+  background-image: url("/canonical.png");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: left center;
@@ -68,19 +68,29 @@ strong {
 
 .cover,
 .slidev-layout.cover {
-  background: #fff;
-  color: var(--canonical-dark);
+  background: var(--canonical-orange);
+  color: #fff;
+}
+
+.cover::before,
+.slidev-layout.cover::before {
+  content: none;
+}
+
+.cover::after,
+.slidev-layout.cover::after {
+  content: none;
 }
 
 .cover h1,
 .slidev-layout.cover h1 {
-  color: var(--canonical-aubergine);
+  color: #fff;
   font-size: 3.5rem;
 }
 
 .cover h2,
 .slidev-layout.cover h2 {
-  color: var(--canonical-orange);
+  color: #fff;
 }
 
 .implementation-grid {
