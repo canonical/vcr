@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_MARKDOWN = "slides.md";
@@ -73,7 +73,11 @@ async function renderTerminalBlocks(input) {
       reused += 1;
     }
 
-    output += buildCachedBlock({ language, meta: meta.trim(), script, hash, blockFormat, mediaPath });
+    const durationMs = !dryRun && !skipRender && await exists(assetPath)
+      ? readMediaDurationMs(assetPath)
+      : undefined;
+
+    output += buildCachedBlock({ language, meta: meta.trim(), script, hash, blockFormat, mediaPath, durationMs });
     lastIndex = match.index + full.length;
   }
 
@@ -94,12 +98,13 @@ function stripCachedBlocks(input) {
   return withoutClearText.replace(legacyBase64Pattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
 }
 
-function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath }) {
+function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath, durationMs }) {
   const source = `\`\`\`${language}${meta ? ` ${meta}` : ""}\n${script}\n\`\`\``;
   const media = blockFormat === "gif"
     ? `![Terminal recording](${mediaPath})`
     : `<video src="${mediaPath}" controls autoplay playsinline muted></video>`;
-  return `${START} hash=${hash} format=${blockFormat} -->\n${media}\n${SOURCE}\n${source}\n${END}`;
+  const durationMeta = durationMs ? ` durationMs=${durationMs}` : "";
+  return `${START} hash=${hash} format=${blockFormat}${durationMeta} -->\n${media}\n${SOURCE}\n${source}\n${END}`;
 }
 
 function relativeMarkdownAssetPath(markdownFile, assetPath) {
@@ -120,6 +125,28 @@ async function renderWithVhs(script, assetPath, blockFormat, command) {
     throw new Error(`Unexpected output extension for ${assetPath}`);
   }
   await fs.rm(tmpDir, { recursive: true, force: true });
+}
+
+function readMediaDurationMs(assetPath) {
+  const probe = spawnSync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    assetPath,
+  ], { encoding: "utf8" });
+
+  if (probe.error || probe.status !== 0) {
+    console.warn(`Could not read duration for ${assetPath}; install ffprobe to write duration metadata`);
+    return undefined;
+  }
+
+  const seconds = Number.parseFloat(probe.stdout.trim());
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    console.warn(`Could not read a positive duration for ${assetPath}`);
+    return undefined;
+  }
+
+  return Math.round(seconds * 1000);
 }
 
 function run(command, argv, options) {
