@@ -10,17 +10,17 @@
   font-family: Ubuntu, Inter, system-ui, sans-serif;
   color: var(--canonical-dark);
   background: #fff;
-  padding: 64px 72px 56px 72px;
+  padding: 76px 72px 56px 72px;
 }
 
 .slidev-layout::before {
   content: "";
   position: absolute;
-  top: 28px;
+  top: 24px;
   left: 36px;
   width: 150px;
-  height: 32px;
-  /* background-image: url("canonical.png"); */
+  height: 40px;
+  background-image: url("/canonical-logo.svg");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: left center;
@@ -43,7 +43,7 @@
 h1 {
   color: var(--canonical-aubergine);
   font-weight: 700;
-  margin-top: 48px;
+  margin-top: 32px;
 }
 
 h2 {
@@ -68,13 +68,13 @@ strong {
 
 .cover,
 .slidev-layout.cover {
-  background: var(--canonical-aubergine);
-  color: white;
+  background: #fff;
+  color: var(--canonical-dark);
 }
 
 .cover h1,
 .slidev-layout.cover h1 {
-  color: white;
+  color: var(--canonical-aubergine);
   font-size: 3.5rem;
 }
 
