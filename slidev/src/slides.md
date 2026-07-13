@@ -33,11 +33,11 @@ transition: fade-out
 
 <div class="grid grid-cols-2 gap-8 mt-10">
   <div v-click class="p-6 rounded-xl border border-primary/30 bg-primary/10 text-left">
-    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" src="./ugo.png" alt="Ugo Landini" />
+    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" :src="'/ugo.png'" alt="Ugo Landini" />
     <h3 class="text-2xl font-bold text-center">Ugo Landini</h3>
   </div>
   <div v-click class="p-6 rounded-xl border border-primary/30 bg-primary/10 text-left">
-    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" src="./dave.png" alt="Dave Ahearn" />
+    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" :src="'/dave.png'" alt="Dave Ahearn" />
     <h3 class="text-2xl font-bold text-center">Dave Ahearn</h3>
   </div>
 </div>
@@ -139,7 +139,7 @@ Let's do some random terminal commands
 
 
 <!-- sli-terminal:start hash=87def30b3764 format=gif -->
-![Terminal recording](./terminal-cache/basic-terminal-87def30b3764.gif)
+<img :src="'/terminal-cache/basic-terminal-87def30b3764.gif'" alt="Terminal recording" />
 <!-- sli-terminal:source -->
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
@@ -177,7 +177,7 @@ Sleep 30s
 Let's have a look at LXD documentation
 
 <!-- sli-playwright:start hash=04c91987bf1e format=webm -->
-<video src="./playwright-cache/basic-web-session-04c91987bf1e.webm" controls autoplay playsinline muted loop></video>
+<video :src="'/playwright-cache/basic-web-session-04c91987bf1e.webm'" controls autoplay playsinline muted loop></video>
 <!-- sli-playwright:source -->
 
 ```js playwright name=basic-web-session width=1280 height=720
@@ -302,17 +302,17 @@ Each training module is a single markdown file with all the data and metadata.
 
 <div class="implementation-grid">
   <div class="implementation-card">
-    <img class="implementation-logo" src="./slidev.png" alt="sli.dev logo" />
+    <img class="implementation-logo" :src="'/slidev.png'" alt="sli.dev logo" />
     <h2>sli.dev</h2>
     <p>Author the talk as Markdown-powered Slidev slides on steroids.</p>
   </div>
   <div class="implementation-card">
-    <img class="implementation-logo" src="./vhs.png" alt="VHS logo" />
+    <img class="implementation-logo" :src="'/vhs.png'" alt="VHS logo" />
     <h2>VHS</h2>
     <p>Render terminal commands into cached media</p>
   </div>
   <div class="implementation-card">
-    <img class="implementation-logo" src="./playwright.svg" alt="Playwright logo" />
+    <img class="implementation-logo" :src="'/playwright.svg'" alt="Playwright logo" />
     <h2>Playwright</h2>
     <p>Drive browsers automatically, capture interactions, and cache the resulting videos.</p>
   </div>
