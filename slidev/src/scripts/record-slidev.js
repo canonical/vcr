@@ -83,7 +83,4 @@ const dst = path.join(OUT_DIR, "slidev-recording.webm");
 
 await fs.rename(src, dst);
 
-console.log(`Video written to ${dst}`);
-console.log();
-console.log("Convert to MP4 with:");
 console.log(`ffmpeg -i ${dst} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);

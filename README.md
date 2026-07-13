@@ -5,11 +5,11 @@ To start the slide show:
 - `pnpm install`
 - `pnpm run dev`
 - visit <http://localhost:3030>
-- `pnpm run record-video` to capture a browser video recording of the slides, including animated GIFs, MP4s, or other embedded media
+- with the dev server running, `pnpm run record-video` to capture a browser video recording of the slides, including animated GIFs, MP4s, or other embedded media
 
 Edit the [slides.md](./slides.md) to see the changes.
 
-`pnpm run record-video` starts Slidev, waits for it to become reachable, records the rendered browser viewport, and shuts Slidev down cleanly so the recording command can succeed after the recorder exits. The recorder advances slides and click steps every 1 second by default, waits for visible `<video>` elements to finish before advancing, uses cached terminal GIF duration metadata when available, and accepts `--duration=1500`, `--duration=1.5s`, or `ANIMATED_STEP_DURATION_MS=1500` to adjust the fallback non-video step duration. For precise timing, pass `--durations-file=path/to/durations.txt` (alias: `--timings-file=...`) or set `RECORD_VIDEO_DURATIONS_FILE`; the local file should contain one positive duration per row, such as `1000`, `1500ms`, or `1.5s`, and each row is used for the corresponding recording step. The command writes `videos/slidev-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
+`pnpm run record-video` records the already-running Slidev page at `http://localhost:3030`. The recorder advances slides and click steps every 1 second by default, waits for visible `<video>` elements to finish before advancing, uses cached terminal GIF duration metadata when available, and accepts `--duration=1500`, `--duration=1.5s`, or `ANIMATED_STEP_DURATION_MS=1500` to adjust the fallback non-video step duration. For precise timing, pass `--durations-file=path/to/durations.txt` (alias: `--timings-file=...`) or set `RECORD_VIDEO_DURATIONS_FILE`; the local file should contain one positive duration per row, such as `1000`, `1500ms`, or `1.5s`, and each row is used for the corresponding recording step. The command writes `videos/slidev-recording.webm` and prints only the copy-pasteable `ffmpeg` command for converting it to MP4.
 
 Learn more about Slidev at the [documentation](https://sli.dev/).
 
