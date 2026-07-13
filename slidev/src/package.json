@@ -6,11 +6,9 @@
     "build": "slidev build",
     "dev": "slidev --open",
     "export": "slidev export",
-    "record": "node scripts/record-slidev.js",
-    "video": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record\"",
     "terminal:render": "node scripts/render-terminal-tapes.js",
     "record:animated": "node scripts/record-slidev-animated.js",
-    "video-animated": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record:animated\"",
+    "record-video": "concurrently -k -s first \"pnpm run dev -- --host 0.0.0.0\" \"wait-on http://localhost:3030 && pnpm run record:animated\"",
     "speech:render": "node scripts/render-speech-audio.js",
     "audio:render": "node scripts/render-speech-audio.js",
     "playwright:render": "node scripts/render-playwright-videos.js"

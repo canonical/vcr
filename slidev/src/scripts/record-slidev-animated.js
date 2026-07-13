@@ -4,7 +4,7 @@ import path from "node:path";
 
 const SLIDEV_URL = process.env.SLIDEV_URL ?? "http://localhost:3030";
 const OUT_DIR = process.env.VIDEO_OUT_DIR ?? "videos";
-const OUTPUT_NAME = process.env.VIDEO_OUTPUT_NAME ?? "slidev-animated-recording.webm";
+const OUTPUT_NAME = process.env.VIDEO_OUTPUT_NAME ?? "slidev-recording.webm";
 const VIEWPORT = { width: 1920, height: 1080 };
 const DEFAULT_STEP_DURATION_MS = 1000;
 const ADVANCE_SETTLE_MS = 500;
@@ -30,17 +30,42 @@ function parseDuration(value, source) {
   return Math.round(duration);
 }
 
-function readStepDuration() {
-  const durationArg = process.argv.find(arg => arg.startsWith("--duration="));
-  const stepDurationArg = process.argv.find(arg => arg.startsWith("--step-duration="));
-  const arg = durationArg ?? stepDurationArg;
+function readOption(name) {
+  const prefix = `--${name}=`;
+  return process.argv.find(arg => arg.startsWith(prefix))?.slice(prefix.length);
+}
 
-  return parseDuration(arg?.split("=")[1], arg?.split("=")[0])
+function readStepDuration() {
+  const durationArg = readOption("duration");
+  const stepDurationArg = readOption("step-duration");
+
+  return parseDuration(durationArg ?? stepDurationArg, durationArg ? "--duration" : "--step-duration")
     ?? parseDuration(process.env.ANIMATED_STEP_DURATION_MS, "ANIMATED_STEP_DURATION_MS")
     ?? DEFAULT_STEP_DURATION_MS;
 }
 
+async function readPreciseDurations() {
+  const durationsFile = readOption("durations-file") ?? readOption("timings-file") ?? process.env.RECORD_VIDEO_DURATIONS_FILE;
+  if (!durationsFile) {
+    return { file: undefined, durations: [] };
+  }
+
+  const contents = await fs.readFile(durationsFile, "utf8");
+  const durations = contents
+    .split(/\r?\n/)
+    .map((line, index) => ({ line: line.trim(), index: index + 1 }))
+    .filter(({ line }) => line && !line.startsWith("#"))
+    .map(({ line, index }) => parseDuration(line, `${durationsFile}:${index}`));
+
+  if (durations.length === 0) {
+    throw new Error(`${durationsFile} must contain at least one duration`);
+  }
+
+  return { file: durationsFile, durations };
+}
+
 const stepDuration = readStepDuration();
+const preciseTiming = await readPreciseDurations();
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
@@ -157,9 +182,24 @@ async function waitForAnimatedMedia(stepDurationMs) {
 let step = 1;
 while (true) {
   const beforeAdvance = await getSlideState();
-  const media = await waitForAnimatedMedia(stepDuration);
+  let media;
+  let waitLabel;
+
+  if (preciseTiming.file) {
+    const duration = preciseTiming.durations[step - 1];
+    if (!duration) {
+      throw new Error(`Missing duration for recording step ${step} in ${preciseTiming.file}`);
+    }
+
+    await page.waitForTimeout(duration);
+    media = { images: 0, videos: 0 };
+    waitLabel = `${duration}ms from ${preciseTiming.file}`;
+  } else {
+    media = await waitForAnimatedMedia(stepDuration);
+    waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;
+  }
+
   const mediaLabel = media.images || media.videos ? ` (${media.images} images, ${media.videos} videos)` : "";
-  const waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;
   console.log(`Recording step ${step}${mediaLabel}; waited ${waitLabel}`);
 
   await page.keyboard.press("ArrowRight");
@@ -186,7 +226,11 @@ if (!generatedWebm) {
 const generatedPath = path.join(OUT_DIR, generatedWebm);
 await fs.rename(generatedPath, outputPath);
 
-console.log(`Animated video written to ${outputPath}`);
+if (preciseTiming.file && preciseTiming.durations.length > step) {
+  console.warn(`Ignored ${preciseTiming.durations.length - step} unused duration(s) from ${preciseTiming.file}`);
+}
+
+console.log(`Video written to ${outputPath}`);
 console.log();
 console.log("Convert to MP4 with:");
-console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-animated-recording.mp4`);
+console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);
