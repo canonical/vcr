@@ -10,7 +10,7 @@ To start the slide show:
 
 Edit the [slides.md](./slides.md) to see the changes.
 
-`pnpm run video-animated` starts Slidev and records the rendered browser viewport instead of relying on static slide images. Use it when animated GIFs or embedded MP4 elements need to keep moving in the exported recording. The command writes `videos/slidev-animated-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
+`pnpm run video-animated` starts Slidev and records the rendered browser viewport instead of relying on static slide images. Use it when animated GIFs or embedded MP4 elements need to keep moving in the exported recording. The recorder advances slides and click steps every 1 second by default, waits for visible `<video>` elements to finish before advancing, and accepts `--duration=1500`, `--duration=1.5s`, or `ANIMATED_STEP_DURATION_MS=1500` to adjust the non-video step duration. The command writes `videos/slidev-animated-recording.webm` and prints an `ffmpeg` command for converting it to MP4.
 
 Learn more about Slidev at the [documentation](https://sli.dev/).
 
