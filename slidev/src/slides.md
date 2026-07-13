@@ -318,7 +318,6 @@ Each training module is a single markdown file with all the data and metadata.
   </div>
 </div>
 
-
 ---
 
 # What's missing
@@ -334,7 +333,7 @@ Each training module is a single markdown file with all the data and metadata.
 Is VCR complete? User-friendly, bullet proof, bug free? <tt>No</tt>.
 </div>
 <div v-click mt-12>
-Is VCR already usable today? <span v-mark.red="2"> Definitely YES</span>.
+Is VCR already usable today? <span v-mark.red="2"> Definitely YES</span>. We are already producing a microcloud course and a presales course with this tool.
 </div>
 
 
@@ -358,7 +357,7 @@ Imagine something like: "update slides 4, 8 and 10 of the microcloud enablement 
 transition: fade-out
 ---
 
-# Useful Links
+# Some Links
 
 - [VCR](https://github.com/canonical/vcr/)
 - [Sli.dev](https://github.com/slidevjs/slidev)
