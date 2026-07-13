@@ -325,7 +325,7 @@ Each training module is a single markdown file with all the data and metadata.
 
 - Canonical templates!
 - Refactoring of some crappy AI-generated code
-- Integration of the Speech/subtitles part (which is now "external")
+- Full integration of the Speech/subtitles part (which is now an external script)
 - Making it user-friendly
 
 [VCR Github](https://github.com/canonical/vcr/)
@@ -364,7 +364,7 @@ transition: fade-out
 - [Sli.dev](https://github.com/slidevjs/slidev)
 - [VHS](https://github.com/charmbracelet/vhs)
 - [Playwright](https://playwright.dev/)
-- [FFMpg](https://www.ffmpeg.org/)
+- [FFMpeg](https://www.ffmpeg.org/)
 - [Eleven Labs](https://elevenlabs.io/)
 
 ## Questions?
