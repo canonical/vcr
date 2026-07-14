@@ -140,8 +140,8 @@ Let's look at an <tt>example</tt>!
 Let's do some random terminal commands
 
 
-<!-- sli-terminal:start hash=26768b0c2579 format=gif -->
-![Terminal recording](./terminal-cache/basic-terminal-26768b0c2579.gif)
+<!-- sli-terminal:start hash=e91d57627b0a format=gif durationMs=23000 -->
+![Terminal recording](./terminal-cache/basic-terminal-e91d57627b0a.gif)
 <!-- sli-terminal:source -->
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
@@ -168,7 +168,7 @@ Sleep 3s
 Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
-Sleep 10s
+Sleep 11s
 ```
 <!-- sli-terminal:end -->
 
@@ -181,6 +181,7 @@ Let's have a look at LXD documentation
 <!-- sli-playwright:start hash=04c91987bf1e format=webm -->
 <video :src="'/playwright-cache/basic-web-session-04c91987bf1e.webm'" controls autoplay playsinline muted loop></video>
 <!-- sli-playwright:source -->
+
 
 
 
