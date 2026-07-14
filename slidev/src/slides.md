@@ -370,7 +370,7 @@ VCR is very agentic friendly:
 <div v-click mt-12>
 "update slides 4, 8 and 10 of the microcloud enablement course with the new 3.3 release. Remember to update terminal output in slide 10 to show the new version release"
 
-```npm run record-video```
+<code class="llm-command">npm run record-video</code>
 </div>
 
 ---

@@ -128,3 +128,14 @@ strong {
   object-fit: contain;
 }
 
+.llm-command {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.45rem;
+  background: #ffffff;
+  color: var(--canonical-dark);
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 2px 8px rgb(17 17 17 / 0.12);
+  font-weight: 700;
+}
