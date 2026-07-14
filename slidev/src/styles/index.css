@@ -139,3 +139,21 @@ strong {
   box-shadow: 0 2px 8px rgb(17 17 17 / 0.12);
   font-weight: 700;
 }
+
+/* Keep Slidev/Shiki code blocks readable on light Canonical slides.
+   Some generated themes can leave dark token colors on a dark code surface,
+   so force a light code panel and light-theme token colors. */
+.slidev-layout :where(pre, .shiki, .slidev-code) {
+  background: #f7f7f7 !important;
+  color: #111111 !important;
+  border: 1px solid #d9d9d9;
+  border-radius: 0.75rem;
+}
+
+.slidev-layout :where(pre code, .shiki code, .slidev-code code) {
+  color: #111111 !important;
+}
+
+.slidev-layout :where(.shiki span, .slidev-code span) {
+  color: var(--shiki-light, #111111) !important;
+}
