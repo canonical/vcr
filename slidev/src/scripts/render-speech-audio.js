@@ -4,14 +4,44 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+
+// ---------------------------------------------------------------------------
+// ElevenLabs config — loaded from ~/.chatterbox/.elevenlabs.env (or process.env)
+// ---------------------------------------------------------------------------
+function loadEnvFile(filePath) {
+  try {
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq < 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim().replace(/^['"]|['"]$/g, "");
+      if (!(key in process.env)) process.env[key] = val;
+    }
+  } catch {
+    // env file optional
+  }
+}
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, "..");
+
+loadEnvFile(path.join(projectRoot, ".env.elevenlabs"));
+loadEnvFile(path.join(process.env.HOME ?? "/root", "chatterbox", ".elevenlabs.env"));
+
+const ELEVENLABS_API_KEY  = process.env.ELEVENLABS_API_KEY;
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "HEfF1IJ9HcifVBNWZdCQ";
+const ELEVENLABS_MODEL    = process.env.ELEVENLABS_MODEL    ?? "eleven_multilingual_v2";
+const ELEVENLABS_DICT_ID  = process.env.ELEVENLABS_DICT_ID  ?? "iV3GvcfblriLHpxKiZZg";
+const ELEVENLABS_DICT_VER = process.env.ELEVENLABS_DICT_VER ?? "azFYmgQFr9GN2XQ4y5Lq";
+const USE_ELEVENLABS = Boolean(ELEVENLABS_API_KEY);
 
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "audio-cache";
 const START = "<!-- sli-speech:start";
 const END = "<!-- sli-speech:end -->";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, "..");
 
 const args = parseArgs(process.argv.slice(2));
 const markdownPath = path.resolve(projectRoot, args.file ?? DEFAULT_MARKDOWN);
@@ -20,6 +50,12 @@ const dryRun = Boolean(args.dryRun);
 const skipRender = Boolean(args.skipRender);
 const ttsBin = args.ttsBin ?? "piper";
 const model = args.model ?? process.env.PIPER_MODEL;
+
+if (USE_ELEVENLABS) {
+  console.log(`Using ElevenLabs (voice=${ELEVENLABS_VOICE_ID}, model=${ELEVENLABS_MODEL})`);
+} else {
+  console.log(`ElevenLabs API key not found — falling back to piper (${ttsBin})`);
+}
 
 const markdown = await fs.readFile(markdownPath, "utf8");
 const processed = await renderSpeechBlocks(markdown);
@@ -56,8 +92,9 @@ async function renderSpeechBlocks(input) {
     }
 
     const voiceModel = options.model ?? model;
-    const hash = hashText(text, voiceModel ?? "default");
-    const basename = `${options.name ? slug(options.name) + "-" : ""}${hash}.wav`;
+    const format = USE_ELEVENLABS ? "mp3" : "wav";
+    const hash = hashText(text, USE_ELEVENLABS ? `elevenlabs-${ELEVENLABS_VOICE_ID}` : (voiceModel ?? "default"));
+    const basename = `${options.name ? slug(options.name) + "-" : ""}${hash}.${format}`;
     const assetPath = path.join(cacheDir, basename);
     const mediaPath = relativeMarkdownAssetPath(markdownPath, assetPath);
 
@@ -66,16 +103,20 @@ async function renderSpeechBlocks(input) {
       rendered += 1;
       if (!dryRun && !skipRender) {
         await fs.mkdir(cacheDir, { recursive: true });
-        await renderWithLocalModel(text, assetPath, { command: options.ttsBin ?? ttsBin, model: voiceModel });
+        if (USE_ELEVENLABS) {
+          await renderWithElevenLabs(text, assetPath);
+        } else {
+          await renderWithLocalModel(text, assetPath, { command: options.ttsBin ?? ttsBin, model: voiceModel });
+        }
       } else if (!dryRun && skipRender) {
         await fs.mkdir(cacheDir, { recursive: true });
-        await fs.writeFile(assetPath, `placeholder wav for ${hash}\n`);
+        await fs.writeFile(assetPath, `placeholder for ${hash}\n`);
       }
     } else {
       reused += 1;
     }
 
-    output += buildCachedBlock({ source, hash, mediaPath });
+    output += buildCachedBlock({ source, hash, mediaPath, format });
     lastIndex = match.index + full.length;
   }
 
@@ -88,15 +129,38 @@ function stripCachedBlocks(input) {
   return input.replace(cachedPattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
 }
 
-function buildCachedBlock({ source, hash, mediaPath }) {
+function buildCachedBlock({ source, hash, mediaPath, format = "wav" }) {
   const encoded = Buffer.from(source, "utf8").toString("base64");
   const audio = `<audio class="sli-speech-track" src="${mediaPath}" autoplay preload="auto"></audio>`;
-  return `${START} hash=${hash} format=wav -->\n${audio}\n<!-- sli-speech:source\n${encoded}\n${END}`;
+  return `${START} hash=${hash} format=${format} -->\n${audio}\n<!-- sli-speech:source\n${encoded}\n${END}`;
 }
 
 function relativeMarkdownAssetPath(markdownFile, assetPath) {
   const relativePath = path.relative(path.dirname(markdownFile), assetPath).split(path.sep).join("/");
   return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+}
+
+async function renderWithElevenLabs(text, assetPath) {
+  const payload = JSON.stringify({
+    text: text.trim(),
+    model_id: ELEVENLABS_MODEL,
+    voice_settings: { stability: 0.55, similarity_boost: 0.80 },
+    pronunciation_dictionary_locators: [
+      { pronunciation_dictionary_id: ELEVENLABS_DICT_ID, version_id: ELEVENLABS_DICT_VER },
+    ],
+  });
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+    method: "POST",
+    headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+    body: payload,
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`ElevenLabs API error ${res.status}: ${body}`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  await fs.writeFile(assetPath, buf);
+  console.log(`  ElevenLabs → ${path.basename(assetPath)} (${(buf.length / 1024).toFixed(0)}KB)`);
 }
 
 async function renderWithLocalModel(text, assetPath, { command, model }) {
