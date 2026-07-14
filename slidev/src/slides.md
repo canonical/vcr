@@ -140,14 +140,13 @@ Let's look at some <strong>examples</strong>!
 
 ---
 
-
 # A terminal session
 
 Let's do some random terminal commands
 
 
-<!-- sli-terminal:start hash=e91d57627b0a format=gif durationMs=23000 -->
-![Terminal recording](./terminal-cache/basic-terminal-e91d57627b0a.gif)
+<!-- sli-terminal:start hash=b462e616b161 format=gif durationMs=16440 -->
+![Terminal recording](./terminal-cache/basic-terminal-b462e616b161.gif)
 <!-- sli-terminal:source -->
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
@@ -159,7 +158,7 @@ Set Theme Dracula
 Set Padding 32
 Set Framerate 30
 
-Type "echo '=== some  terminal commands ==='"
+Type "echo Hello, Copenaghen!"
 Sleep 300ms
 Enter 1
 Sleep 1s
@@ -174,9 +173,13 @@ Sleep 3s
 Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
-Sleep 11s
+Sleep 5s
 ```
 <!-- sli-terminal:end -->
+
+<!--
+sli-terminal:end
+-->
 
 ---
 
@@ -187,6 +190,15 @@ Let's have a look at LXD documentation
 <!-- sli-playwright:start hash=04c91987bf1e format=webm -->
 <video :src="'/playwright-cache/basic-web-session-04c91987bf1e.webm'" controls autoplay playsinline muted loop></video>
 <!-- sli-playwright:source -->
+
+
+
+
+
+
+
+
+
 
 
 
