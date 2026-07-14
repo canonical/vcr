@@ -66,45 +66,39 @@ Issues:
 
 </div>
 
+
 ---
 
-# The theory
+# Training As Code
 
 <p v-click>
-The IT industry fixed (becaming mainstream) a similar issue around 10 years ago.
-</p>
-
-<p v-click>
-Express everything "as code", so that the course itself can be updated and regenerated automatically as needed
+The theory: express every part of a training as code, so that the course itself can be updated and regenerated automatically as needed
 </p>
 
 <div class="grid gap-3 mt-4 text-sm" style="grid-template-columns: repeat(3, 1fr) 1.5fr 1fr">
   <div v-click.after.up class="p-3 rounded border border-primary/40 bg-primary/15">
     <div class="font-mono text-xs opacity-60 mb-1">Slides</div>
-    <div>The slides text, transitions, effects</div>
+    <div>The slides themselves</div>
   </div>
   <div v-click.after.up class="p-3 rounded border border-primary/40 bg-primary/20">
     <div class="font-mono text-xs opacity-60 mb-1">Terminal Sessions</div>
-    <div>Example commands</div>
+    <div>If you have to show something on the terminal</div>
   </div>
   <div v-click.after.up class="p-3 rounded border border-primary/40 bg-primary/25">
     <div class="font-mono text-xs opacity-60 mb-1">Web/Browser sessions</div>
-    <div>User interfaces, public websites</div>
+    <div>If you have to show something in a browser</div>
   </div>
   <div v-click.after.up class="p-3 rounded border border-primary/40 bg-primary/25">
     <div class="font-mono text-xs opacity-60 mb-1">Speech/Subtitles</div>
-    <div>Different languages, subtitles</div>
+    <div>No human needed to talk, different languages</div>
   </div>
 </div>
 
 <div v-click mt-12>
-<tt>Tac, Training as Code</tt>: exactly the same benefits of Infrastructure as Code, but for a training: no need to type commands in a terminal, to open a browser, or even to talk
-</div>
 
-<div v-click mt-12>
-"update slides 4, 8 and 10 of the microcloud enablement course with the new 3.3 release. Remember to update terminal output in slide 10 to show the new version release"
-</div>
+Exactly the same benefits of Infrastructure as Code, but for a training: no need to type commands in a terminal, to open a browser, or even to talk
 
+</div>
 
 ---
 
@@ -134,7 +128,7 @@ The solution: a tool capable of generating an entire course from text
   </div>
 </div>
 <div v-click mt-12>
-Let's look at some <tt>examples</tt>!
+Let's look at an <tt>example</tt>!
 </div>
 
 
@@ -146,9 +140,10 @@ Let's look at some <tt>examples</tt>!
 Let's do some random terminal commands
 
 
-<!-- sli-terminal:start hash=e91d57627b0a format=gif durationMs=23000 -->
-![Terminal recording](./terminal-cache/basic-terminal-e91d57627b0a.gif)
+<!-- sli-terminal:start hash=26768b0c2579 format=gif durationMs=17680 -->
+![Terminal recording](./terminal-cache/basic-terminal-26768b0c2579.gif)
 <!-- sli-terminal:source -->
+
 ```txt terminal name=basic-terminal
 Output "/tmp/basic-terminal.gif"
 Set Shell "bash"
@@ -174,7 +169,7 @@ Sleep 3s
 Type "gemma4 list-engines"
 Sleep 400ms
 Enter 1
-Sleep 11s
+Sleep 10s
 ```
 <!-- sli-terminal:end -->
 
@@ -184,13 +179,13 @@ Sleep 11s
 
 Let's have a look at LXD documentation
 
+
+
+
+
 <!-- sli-playwright:start hash=04c91987bf1e format=webm -->
-<video :src="'/playwright-cache/basic-web-session-04c91987bf1e.webm'" controls autoplay playsinline muted loop></video>
+<video src="./playwright-cache/basic-web-session-04c91987bf1e.webm" controls autoplay playsinline muted loop></video>
 <!-- sli-playwright:source -->
-
-
-
-
 ```js playwright name=basic-web-session width=1280 height=720
 export default async function ({ page }) {
   await page.addInitScript(() => {
@@ -356,21 +351,17 @@ Interactive and Not Interactive
 
 <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
   <div v-after.up class="p-3 rounded border border-primary/40 bg-primary/10">
-    <div class="font-mono text-xs opacity-60 mb-1">1. Interactive mode</div>
+    <div class="font-mono text-xs opacity-60 mb-1">1. Interactive</div>
     <div>Presentation mode: useful for webinars, "classic" presentations</div>
   </div>
   <div v-click.after.up class="p-3 rounded border border-primary/40 bg-primary/15">
-    <div class="font-mono text-xs opacity-60 mb-1">2. !Interactive mode</div>
-    <div>Generates a video of the whole course from the script, no human interaction at all</div>
+    <div class="font-mono text-xs opacity-60 mb-1">2. !Interactive</div>
+    <div>Generates a video of the whole course from the script</div>
   </div>
 </div>
 
 <div v-click mt-12>
- <tt>Examples:</tt>
-
- If you are recording a webinar, may be you want to use your own voice and be more interactive.
-
- if you need to give a microcloud course to a partner, you can go fully automated and just generate a full video without any interaction
+If you are presenting, may be you want to use your own voice and be more interactive. If you want to be fully automated, just generate a full video.
 </div>
 
 ---
@@ -403,9 +394,9 @@ Each training module is a single markdown file with all the data and metadata.
 # What's missing
 
 - Canonical templates!
+- Refactoring of some crappy AI-generated code
 - Full integration of the Speech/subtitles part (which is now an external script)
-- Installation is not user-friendly
-- Refactoring of some ~~crappy~~ LLM generated code
+- Making it user-friendly
 
 [VCR Github](https://github.com/canonical/vcr/)
 
@@ -414,9 +405,6 @@ Is VCR complete? User-friendly, bullet proof, bug free? <tt>No</tt>.
 </div>
 <div v-click mt-12>
 Is VCR already usable today? <span v-mark.red="2"> Definitely YES</span>. We are already producing a microcloud course and a presales course with this tool.
-</div>
-<div v-click mt-12>
-And this presentation, of course
 </div>
 
 
@@ -433,23 +421,21 @@ VCR is very agentic friendly:
 - Most of the slides can be easily generated by an LLM
 
 <div v-click mt-12>
-"update slides 4, 8 and 10 of the microcloud enablement course with the new 3.3 release. Remember to update terminal output in slide 10 to show the new version release"
-
-> pnpm run record-video
-
+Imagine something like: "update slides 4, 8 and 10 of the microcloud enablement course with the new 3.3 release. Remember to update terminal script in slide 10 to show the new version release"
 </div>
+
 ---
 transition: fade-out
 ---
 
-# More info
+# Some Links
 
-- The tool: [VCR](https://github.com/canonical/vcr/)
-- The slide engine: [Sli.dev](https://github.com/slidevjs/slidev)
-- The terminal renderer: [VHS](https://github.com/charmbracelet/vhs)
-- The web automation: [Playwright](https://playwright.dev/)
-- Everything video-related: [FFMpeg](https://www.ffmpeg.org/)
-- Voice generation: [Eleven Labs](https://elevenlabs.io/)
+- [VCR](https://github.com/canonical/vcr/)
+- [Sli.dev](https://github.com/slidevjs/slidev)
+- [VHS](https://github.com/charmbracelet/vhs)
+- [Playwright](https://playwright.dev/)
+- [FFMpeg](https://www.ffmpeg.org/)
+- [Eleven Labs](https://elevenlabs.io/)
 
 ## Questions?
 ---
