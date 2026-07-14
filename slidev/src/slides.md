@@ -37,8 +37,8 @@ transition: fade-out
     <h3 class="text-2xl font-bold text-center">Ugo Landini</h3>
   </div>
   <div v-click class="p-6 rounded-xl border border-primary/30 bg-primary/10 text-left">
-    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" :src="'/dave.png'" alt="Dave Ahearn" />
-    <h3 class="text-2xl font-bold text-center">Dave Ahearn</h3>
+    <img class="mx-auto mb-5 h-36 w-36 rounded-full border-4 border-primary/40 object-cover" :src="'/dave.png'" alt="Dave Ahern" />
+    <h3 class="text-2xl font-bold text-center">Dave Ahern</h3>
   </div>
 </div>
 
