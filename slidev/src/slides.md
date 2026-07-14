@@ -52,16 +52,16 @@ We need to produce and maintain enablement courses for our partners.
 
 For a good product course, you usually need to do several things:
 
-- to record <tt>terminal</tt> sessions
-- to record <tt>web</tt> sessions with UI
-- to localize slides in <tt>different</tt> languages
-- to reuse existing modules with <tt>same</tt> content
+- to record <strong>terminal</strong> sessions
+- to record <strong>web</strong> sessions with UI
+- to localize slides in <strong>different</strong> languages
+- to reuse existing modules with <strong>same</strong> content
 
 <div v-click mt-12>
 Issues:
 
-- Recording a course is time consuming, so cost is <tt>very high</tt>
-- Current courses are often recorded live sessions, <tt>not studio-quality</tt>
+- Recording a course is time consuming, so cost is <strong>very high</strong>
+- Current courses are often recorded live sessions, <strong>not studio-quality</strong>
 - The worst thing is that to maintain the material up to date, it's necessary to <span v-mark.circle.orange="2">  RE-RECORD  </span> portion of the videos each time something changes
 
 </div>
@@ -98,7 +98,7 @@ Express everything "as code", so that the course itself can be updated and regen
 </div>
 
 <div v-click mt-12>
-<tt>Tac, Training as Code</tt>: exactly the same benefits of Infrastructure as Code, but for a training: no need to type commands in a terminal, to open a browser, or even to talk
+<strong>Tac, Training as Code</strong>: exactly the same benefits of Infrastructure as Code, but for a training: no need to type commands in a terminal, to open a browser, or even to talk
 </div>
 
 <div v-click mt-12>
@@ -134,7 +134,7 @@ The solution: a tool capable of generating an entire course from text
   </div>
 </div>
 <div v-click mt-12>
-Let's look at some <tt>examples</tt>!
+Let's look at some <strong>examples</strong>!
 </div>
 
 
@@ -277,15 +277,15 @@ export default async function ({ page }) {
 <!-- sli-playwright:end -->
 ---
 
-# Speech & Narration — The Goal
+# Speech & Narration: The Goal
 
 <p v-click>
-Automate narration so courses can be re-narrated in minutes when content changes — no re-recording, no studio time.
+Automate narration so courses can be re-narrated in minutes when content changes: no re-recording, no studio time.
 </p>
 
 <div class="grid grid-cols-2 gap-6 mt-6 text-sm">
   <div v-click class="p-4 rounded border border-primary/40 bg-primary/10">
-    <div class="font-mono text-xs opacity-60 mb-2">Option A — Local TTS</div>
+    <div class="font-mono text-xs opacity-60 mb-2">Option A - Local TTS</div>
     <div><strong>F5-TTS</strong> running on-device (workstation)</div>
     <ul class="mt-2 space-y-1 opacity-80">
       <li>✅ Zero data egress, free to iterate</li>
@@ -296,7 +296,7 @@ Automate narration so courses can be re-narrated in minutes when content changes
     </ul>
   </div>
   <div v-click class="p-4 rounded border border-primary/40 bg-primary/15">
-    <div class="font-mono text-xs opacity-60 mb-2">Option B — ElevenLabs (cloud)</div>
+    <div class="font-mono text-xs opacity-60 mb-2">Option B - ElevenLabs (cloud)</div>
     <div><strong>Professional voice clone</strong> via API</div>
     <ul class="mt-2 space-y-1 opacity-80">
       <li>✅ Natural delivery, correct product pronunciation</li>
@@ -307,44 +307,6 @@ Automate narration so courses can be re-narrated in minutes when content changes
     </ul>
   </div>
 </div>
-
----
-
-# Partner Enablement Content — Where It's Going
-
-<p v-click>
-We translated an existing course (slides and video) from Spanish into English — and learned what it actually takes to scale localized training.
-</p>
-
-<div class="grid grid-cols-2 gap-4 mt-6 text-sm">
-  <div v-click class="p-4 rounded border border-primary/40 bg-primary/10">
-    <div class="font-mono text-xs opacity-60 mb-2">What we learned</div>
-    <ol class="mt-1 space-y-2 list-decimal list-inside opacity-90">
-      <li>Translating slides and narration at scale requires the content to be <strong>structured</strong> — not monolithic decks. Ad-hoc translation doesn't compose or reuse.</li>
-<li>Markdown content easily enables LLM-generated text translations, though it requires additional indicators for proper pacing of generated audio narrations. 
-</li>
-    </ol>
-  </div>
-  <div v-click class="p-4 rounded border border-primary/40 bg-primary/15">
-    <div class="font-mono text-xs opacity-60 mb-2">The plan</div>
-    <ol class="mt-1 space-y-2 list-decimal list-inside opacity-90">
-      <li>Author content <strong>masters in English</strong> — structured, versioned, source-of-truth</li>
-      <li><strong>Componentize</strong> into modules and units reusable across multiple courses</li>
-      <li><strong>Translate text</strong> into target locales (ES, PT-BR, and beyond)</li>
-      <li>Generate <strong>localized audio narrations</strong> per locale with ElevenLabs</li>
-    </ol>
-  </div>
-</div>
-
-<div v-click mt-8>
-The result: one content change propagates to every language automatically — the same way a code change propagates through a CI pipeline.
-</div>
-
-<!-- sli-speech:start hash=fa0d87325e9a format=mp3 -->
-<audio class="sli-speech-track" src="./audio-cache/fa0d87325e9a.mp3" autoplay preload="auto"></audio>
-<!-- sli-speech:source
-PCEtLQpNeSBwYXJ0IG9mIHRoZSBwcm9qZWN0IGJlZ2FuIHdpdGggYSBnb2FsIG9mIHRyYW5zbGF0aW5nIGEgbWFzdGVyIFNwYW5pc2ggcHJlc2VudGF0aW9uIC0gdHJhbnNsYXRpbmcgYm90aCB0aGUgc2xpZGUgY29udGVudHMgaW50byBFbmdsaXNoIGFuZCB0aGVuIHJlY29yZGluZyBhIG5ldyBFbmdsaXNoIGF1ZGlvIHRyYWNrLiBSYXRoZXIgdGhhbiByZWNvcmQgdGhlIGVudGlyZSBkYXlzLWxvbmcgdHJhaW5pbmcgaW4gbXkgb3duIHZvaWNlLCBJIGJlZ2FuIHJlc2VhcmNoIG9uIGhvdyB3ZSBjb3VsZCB1c2UgTExNcyBmb3IgYm90aCBwYXJ0cyBvZiB0aGUgcHJvY2Vzcy4gSW4gZmFjdCBJJ20gbm90IGV2ZW4gcmVhZGluZyB0aGlzIHJpZ2h0IG5vdy4uLgotLT4=
-<!-- sli-speech:end -->
 
 ---
 
@@ -366,7 +328,7 @@ Interactive and Not Interactive
 </div>
 
 <div v-click mt-12>
- <tt>Examples:</tt>
+ <strong>Examples:</strong>
 
  If you are recording a webinar, may be you want to use your own voice and be more interactive.
 
@@ -400,6 +362,45 @@ Each training module is a single markdown file with all the data and metadata.
 
 ---
 
+# Partner Enablement Content: Where It's Going
+
+<p v-click>
+We translated an existing course (slides and video) from Spanish into English and learned what it actually takes to scale localized training.
+</p>
+
+<div class="grid grid-cols-2 gap-4 mt-6 text-sm">
+  <div v-click class="p-4 rounded border border-primary/40 bg-primary/10">
+    <div class="font-mono text-xs opacity-60 mb-2">What we learned</div>
+    <ol class="mt-1 space-y-2 list-decimal list-inside opacity-90">
+      <li>Translating slides and narration at scale requires the content to be <strong>structured</strong> - not monolithic decks. Ad-hoc translation doesn't compose or reuse.</li>
+<li>Markdown content easily enables LLM-generated text translations, though it requires additional indicators for proper pacing of generated audio narrations. 
+</li>
+    </ol>
+  </div>
+  <div v-click class="p-4 rounded border border-primary/40 bg-primary/15">
+    <div class="font-mono text-xs opacity-60 mb-2">The plan</div>
+    <ol class="mt-1 space-y-2 list-decimal list-inside opacity-90">
+      <li>Author content <strong>masters in English</strong>: structured, versioned, source-of-truth</li>
+      <li><strong>Componentize</strong> into modules and units reusable across multiple courses</li>
+      <li><strong>Translate text</strong> into target locales (ES, PT-BR, and beyond)</li>
+      <li>Generate <strong>localized audio narrations</strong> per locale with ElevenLabs</li>
+    </ol>
+  </div>
+</div>
+
+<div v-click mt-8>
+The result: one content change propagates to every language automatically,  the same way a code change propagates through a CI pipeline.
+</div>
+
+<!-- sli-speech:start hash=fa0d87325e9a format=mp3 -->
+<audio class="sli-speech-track" src="./audio-cache/fa0d87325e9a.mp3" autoplay preload="auto"></audio>
+<!-- sli-speech:source
+PCEtLQpNeSBwYXJ0IG9mIHRoZSBwcm9qZWN0IGJlZ2FuIHdpdGggYSBnb2FsIG9mIHRyYW5zbGF0aW5nIGEgbWFzdGVyIFNwYW5pc2ggcHJlc2VudGF0aW9uIC0gdHJhbnNsYXRpbmcgYm90aCB0aGUgc2xpZGUgY29udGVudHMgaW50byBFbmdsaXNoIGFuZCB0aGVuIHJlY29yZGluZyBhIG5ldyBFbmdsaXNoIGF1ZGlvIHRyYWNrLiBSYXRoZXIgdGhhbiByZWNvcmQgdGhlIGVudGlyZSBkYXlzLWxvbmcgdHJhaW5pbmcgaW4gbXkgb3duIHZvaWNlLCBJIGJlZ2FuIHJlc2VhcmNoIG9uIGhvdyB3ZSBjb3VsZCB1c2UgTExNcyBmb3IgYm90aCBwYXJ0cyBvZiB0aGUgcHJvY2Vzcy4gSW4gZmFjdCBJJ20gbm90IGV2ZW4gcmVhZGluZyB0aGlzIHJpZ2h0IG5vdy4uLgotLT4=
+<!-- sli-speech:end -->
+
+
+---
+
 # What's missing
 
 - Canonical templates!
@@ -410,7 +411,7 @@ Each training module is a single markdown file with all the data and metadata.
 [VCR Github](https://github.com/canonical/vcr/)
 
 <div v-click mt-12>
-Is VCR complete? User-friendly, bullet proof, bug free? <tt>No</tt>.
+Is VCR complete? User-friendly, bullet proof, bug free? <strong>No</strong>.
 </div>
 <div v-click mt-12>
 Is VCR already usable today? <span v-mark.red="2"> Definitely YES</span>. We are already producing a microcloud course and a presales course with this tool.
