@@ -91,11 +91,30 @@ async function renderTerminalBlocks(input) {
 }
 
 function stripCachedBlocks(input) {
-  const clearTextPattern = /<!-- sli-terminal:start[\s\S]*?<!-- sli-terminal:source -->\n([\s\S]*?)\n<!-- sli-terminal:end -->/g;
-  const withoutClearText = input.replace(clearTextPattern, (_block, source) => source);
+  const clearTextPattern = /<!-- sli-terminal:start(?:(?!<!-- sli-terminal:start)[\s\S])*?<!-- sli-terminal:source -->\n((?:(?!<!-- sli-terminal:start)[\s\S])*?)\n<!-- sli-terminal:end -->/g;
+  const legacyBase64Pattern = /<!-- sli-terminal:start(?:(?!<!-- sli-terminal:start)[\s\S])*?<!-- sli-terminal:source\n((?:(?!<!-- sli-terminal:start)[\s\S])*?)\n<!-- sli-terminal:end -->/g;
+  const danglingClearTextPattern = /<!-- sli-terminal:start(?:(?!<!-- sli-terminal:start)[\s\S])*?<!-- sli-terminal:source -->\n(?=```|~~~)/g;
 
-  const legacyBase64Pattern = /<!-- sli-terminal:start[\s\S]*?<!-- sli-terminal:source\n([\s\S]*?)\n<!-- sli-terminal:end -->/g;
-  return withoutClearText.replace(legacyBase64Pattern, (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8"));
+  return replaceUntilStable(input, [
+    { pattern: clearTextPattern, replacer: (_block, source) => source },
+    { pattern: legacyBase64Pattern, replacer: (_block, encoded) => Buffer.from(encoded.trim(), "base64").toString("utf8") },
+    { pattern: danglingClearTextPattern, replacer: () => "" },
+  ]);
+}
+
+function replaceUntilStable(input, replacements) {
+  let output = input;
+  let previous;
+
+  do {
+    previous = output;
+    for (const { pattern, replacer } of replacements) {
+      pattern.lastIndex = 0;
+      output = output.replace(pattern, replacer);
+    }
+  } while (output !== previous);
+
+  return output;
 }
 
 function buildCachedBlock({ language, meta, script, hash, blockFormat, mediaPath, durationMs }) {
