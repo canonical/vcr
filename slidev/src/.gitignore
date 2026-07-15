@@ -7,6 +7,5 @@ dist
 components.d.ts
 terminal-cache
 playwright-cache
-audio-cache
 .env.elevenlabs
 

@@ -407,7 +407,7 @@ The result: one content change propagates to every language automatically,  the 
 </div>
 
 <!-- sli-speech:start hash=fa0d87325e9a format=mp3 -->
-<audio class="sli-speech-track" src="./audio-cache/fa0d87325e9a.mp3" autoplay preload="auto"></audio>
+<audio class="sli-speech-track" src="./audio-cache/fa0d87325e9a.mp3" preload="auto"></audio>
 <!-- sli-speech:source
 PCEtLQpNeSBwYXJ0IG9mIHRoZSBwcm9qZWN0IGJlZ2FuIHdpdGggYSBnb2FsIG9mIHRyYW5zbGF0aW5nIGEgbWFzdGVyIFNwYW5pc2ggcHJlc2VudGF0aW9uIC0gdHJhbnNsYXRpbmcgYm90aCB0aGUgc2xpZGUgY29udGVudHMgaW50byBFbmdsaXNoIGFuZCB0aGVuIHJlY29yZGluZyBhIG5ldyBFbmdsaXNoIGF1ZGlvIHRyYWNrLiBSYXRoZXIgdGhhbiByZWNvcmQgdGhlIGVudGlyZSBkYXlzLWxvbmcgdHJhaW5pbmcgaW4gbXkgb3duIHZvaWNlLCBJIGJlZ2FuIHJlc2VhcmNoIG9uIGhvdyB3ZSBjb3VsZCB1c2UgTExNcyBmb3IgYm90aCBwYXJ0cyBvZiB0aGUgcHJvY2Vzcy4gSW4gZmFjdCBJJ20gbm90IGV2ZW4gcmVhZGluZyB0aGlzIHJpZ2h0IG5vdy4uLgotLT4=
 <!-- sli-speech:end -->
