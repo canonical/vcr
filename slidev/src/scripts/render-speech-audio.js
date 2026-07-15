@@ -32,11 +32,46 @@ loadEnvFile(path.join(projectRoot, ".env.elevenlabs"));
 loadEnvFile(path.join(process.env.HOME ?? "/root", "chatterbox", ".elevenlabs.env"));
 
 const ELEVENLABS_API_KEY  = process.env.ELEVENLABS_API_KEY;
-const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "HEfF1IJ9HcifVBNWZdCQ";
-const ELEVENLABS_MODEL    = process.env.ELEVENLABS_MODEL    ?? "eleven_multilingual_v2";
-const ELEVENLABS_DICT_ID  = process.env.ELEVENLABS_DICT_ID  ?? "iV3GvcfblriLHpxKiZZg";
-const ELEVENLABS_DICT_VER = process.env.ELEVENLABS_DICT_VER ?? "azFYmgQFr9GN2XQ4y5Lq";
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
+const ELEVENLABS_MODEL    = process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
+const ELEVENLABS_DICT_ID  = process.env.ELEVENLABS_DICT_ID;
+const ELEVENLABS_DICT_VER = process.env.ELEVENLABS_DICT_VER;
 const USE_ELEVENLABS = Boolean(ELEVENLABS_API_KEY);
+
+if (USE_ELEVENLABS) {
+  const missing = Object.entries({ ELEVENLABS_VOICE_ID, ELEVENLABS_DICT_ID, ELEVENLABS_DICT_VER })
+    .filter(([, v]) => !v).map(([k]) => k);
+  if (missing.length) {
+    console.error(`Missing required ElevenLabs env vars: ${missing.join(", ")}`);
+    console.error("Set them in slidev/src/.env.elevenlabs or in the environment.");
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ElevenLabs text substitutions — ported from partner-enablement
+// preprocess_narration.py: ELEVENLABS_SUBSTITUTIONS + apply_elevenlabs_substitutions()
+//
+// Applied as whole-word replacements (word boundaries respected).
+// Order matters: compound terms first, then their component words.
+// ---------------------------------------------------------------------------
+const ELEVENLABS_SUBSTITUTIONS = [
+  // Compound terms first (before their component words)
+  ["MicroCloud",  "mike-ro-cloud"],
+  ["MicroCeph",   "mike-ro-seff"],
+  ["MicroOVN",    "mike-ro-oh-vin"],
+  ["MicroK8s",    "My-kro-kates"],
+  // Individual product names
+  ["MAAS",        "mahz"],
+  ["LXD",         "lex-dee"],
+  ["JAAS",        "jazz"],
+  ["Ceph",        "seff"],
+  ["ceph",        "seff"],
+  ["OVN",         "oh-vin"],
+  ["Kubeflow",    "kyoob-flow"],
+  ["NIC",         "nick"],
+  ["NICs",        "nicks"],
+];
 
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "audio-cache";
@@ -140,9 +175,24 @@ function relativeMarkdownAssetPath(markdownFile, assetPath) {
   return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
 }
 
+/**
+ * Apply ElevenLabs pronunciation substitutions to narration text.
+ * Mirrors partner-enablement/tools/preprocess_narration.py:apply_elevenlabs_substitutions()
+ * @param {string} text
+ * @returns {string}
+ */
+function applyElevenLabsSubstitutions(text) {
+  for (const [original, replacement] of ELEVENLABS_SUBSTITUTIONS) {
+    const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(new RegExp(`\\b${escaped}\\b`, "g"), replacement);
+  }
+  return text;
+}
+
 async function renderWithElevenLabs(text, assetPath) {
+  const processedText = applyElevenLabsSubstitutions(text.trim());
   const payload = JSON.stringify({
-    text: text.trim(),
+    text: processedText,
     model_id: ELEVENLABS_MODEL,
     voice_settings: { stability: 0.55, similarity_boost: 0.80 },
     pronunciation_dictionary_locators: [
