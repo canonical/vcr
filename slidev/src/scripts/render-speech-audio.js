@@ -48,6 +48,31 @@ if (USE_ELEVENLABS) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ElevenLabs text substitutions — ported from partner-enablement
+// preprocess_narration.py: ELEVENLABS_SUBSTITUTIONS + apply_elevenlabs_substitutions()
+//
+// Applied as whole-word replacements (word boundaries respected).
+// Order matters: compound terms first, then their component words.
+// ---------------------------------------------------------------------------
+const ELEVENLABS_SUBSTITUTIONS = [
+  // Compound terms first (before their component words)
+  ["MicroCloud",  "mike-ro-cloud"],
+  ["MicroCeph",   "mike-ro-seff"],
+  ["MicroOVN",    "mike-ro-oh-vin"],
+  ["MicroK8s",    "My-kro-kates"],
+  // Individual product names
+  ["MAAS",        "mahz"],
+  ["LXD",         "lex-dee"],
+  ["JAAS",        "jazz"],
+  ["Ceph",        "seff"],
+  ["ceph",        "seff"],
+  ["OVN",         "oh-vin"],
+  ["Kubeflow",    "kyoob-flow"],
+  ["NIC",         "nick"],
+  ["NICs",        "nicks"],
+];
+
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "audio-cache";
 const START = "<!-- sli-speech:start";
@@ -149,31 +174,6 @@ function relativeMarkdownAssetPath(markdownFile, assetPath) {
   const relativePath = path.relative(path.dirname(markdownFile), assetPath).split(path.sep).join("/");
   return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
 }
-
-// ---------------------------------------------------------------------------
-// ElevenLabs text substitutions — ported from partner-enablement
-// preprocess_narration.py: ELEVENLABS_SUBSTITUTIONS + apply_elevenlabs_substitutions()
-//
-// Applied as whole-word replacements (word boundaries respected).
-// Order matters: compound terms first, then their component words.
-// ---------------------------------------------------------------------------
-const ELEVENLABS_SUBSTITUTIONS = [
-  // Compound terms first (before their component words)
-  ["MicroCloud",  "mike-ro-cloud"],
-  ["MicroCeph",   "mike-ro-seff"],
-  ["MicroOVN",    "mike-ro-oh-vin"],
-  ["MicroK8s",    "My-kro-kates"],
-  // Individual product names
-  ["MAAS",        "mahz"],
-  ["LXD",         "lex-dee"],
-  ["JAAS",        "jazz"],
-  ["Ceph",        "seff"],
-  ["ceph",        "seff"],
-  ["OVN",         "oh-vin"],
-  ["Kubeflow",    "kyoob-flow"],
-  ["NIC",         "nick"],
-  ["NICs",        "nicks"],
-];
 
 /**
  * Apply ElevenLabs pronunciation substitutions to narration text.
