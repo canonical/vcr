@@ -1,6 +1,10 @@
 import { chromium } from "playwright";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const SLIDEV_URL = process.env.SLIDEV_URL ?? "http://localhost:3030";
 const OUT_DIR = process.env.VIDEO_OUT_DIR ?? "videos";
@@ -230,4 +234,19 @@ if (preciseTiming.file && preciseTiming.durations.length > step) {
   console.warn(`Ignored ${preciseTiming.durations.length - step} unused duration(s) from ${preciseTiming.file}`);
 }
 
-console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);
+const mp4Path = outputPath.replace(/\.webm$/i, ".mp4");
+console.log(`\nConverting to MP4…`);
+try {
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-i", outputPath,
+    "-c:v", "libx264",
+    "-pix_fmt", "yuv420p",
+    "-movflags", "+faststart",
+    mp4Path,
+  ]);
+  console.log(`MP4 written: ${mp4Path}`);
+} catch (err) {
+  console.warn(`ffmpeg conversion failed: ${err.message}`);
+  console.warn(`Run manually: ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart ${mp4Path}`);
+}
