@@ -32,11 +32,21 @@ loadEnvFile(path.join(projectRoot, ".env.elevenlabs"));
 loadEnvFile(path.join(process.env.HOME ?? "/root", "chatterbox", ".elevenlabs.env"));
 
 const ELEVENLABS_API_KEY  = process.env.ELEVENLABS_API_KEY;
-const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "HEfF1IJ9HcifVBNWZdCQ";
-const ELEVENLABS_MODEL    = process.env.ELEVENLABS_MODEL    ?? "eleven_multilingual_v2";
-const ELEVENLABS_DICT_ID  = process.env.ELEVENLABS_DICT_ID  ?? "iV3GvcfblriLHpxKiZZg";
-const ELEVENLABS_DICT_VER = process.env.ELEVENLABS_DICT_VER ?? "azFYmgQFr9GN2XQ4y5Lq";
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
+const ELEVENLABS_MODEL    = process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
+const ELEVENLABS_DICT_ID  = process.env.ELEVENLABS_DICT_ID;
+const ELEVENLABS_DICT_VER = process.env.ELEVENLABS_DICT_VER;
 const USE_ELEVENLABS = Boolean(ELEVENLABS_API_KEY);
+
+if (USE_ELEVENLABS) {
+  const missing = Object.entries({ ELEVENLABS_VOICE_ID, ELEVENLABS_DICT_ID, ELEVENLABS_DICT_VER })
+    .filter(([, v]) => !v).map(([k]) => k);
+  if (missing.length) {
+    console.error(`Missing required ElevenLabs env vars: ${missing.join(", ")}`);
+    console.error("Set them in slidev/src/.env.elevenlabs or in the environment.");
+    process.exit(1);
+  }
+}
 
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "audio-cache";
