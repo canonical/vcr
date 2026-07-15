@@ -11,7 +11,8 @@
     "record-video": "node scripts/record-video.js",
     "speech:render": "node scripts/render-speech-audio.js",
     "audio:render": "node scripts/render-speech-audio.js",
-    "playwright:render": "node scripts/render-playwright-videos.js"
+    "playwright:render": "node scripts/render-playwright-videos.js",
+    "durations:generate": "node scripts/generate-durations.js"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",
