@@ -140,9 +140,49 @@ function relativeMarkdownAssetPath(markdownFile, assetPath) {
   return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
 }
 
+// ---------------------------------------------------------------------------
+// ElevenLabs text substitutions — ported from partner-enablement
+// preprocess_narration.py: ELEVENLABS_SUBSTITUTIONS + apply_elevenlabs_substitutions()
+//
+// Applied as whole-word replacements (word boundaries respected).
+// Order matters: compound terms first, then their component words.
+// ---------------------------------------------------------------------------
+const ELEVENLABS_SUBSTITUTIONS = [
+  // Compound terms first (before their component words)
+  ["MicroCloud",  "mike-ro-cloud"],
+  ["MicroCeph",   "mike-ro-seff"],
+  ["MicroOVN",    "mike-ro-oh-vin"],
+  ["MicroK8s",    "My-kro-kates"],
+  // Individual product names
+  ["MAAS",        "mahz"],
+  ["LXD",         "lex-dee"],
+  ["JAAS",        "jazz"],
+  ["Ceph",        "seff"],
+  ["ceph",        "seff"],
+  ["OVN",         "oh-vin"],
+  ["Kubeflow",    "kyoob-flow"],
+  ["NIC",         "nick"],
+  ["NICs",        "nicks"],
+];
+
+/**
+ * Apply ElevenLabs pronunciation substitutions to narration text.
+ * Mirrors partner-enablement/tools/preprocess_narration.py:apply_elevenlabs_substitutions()
+ * @param {string} text
+ * @returns {string}
+ */
+function applyElevenLabsSubstitutions(text) {
+  for (const [original, replacement] of ELEVENLABS_SUBSTITUTIONS) {
+    const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(new RegExp(`\\b${escaped}\\b`, "g"), replacement);
+  }
+  return text;
+}
+
 async function renderWithElevenLabs(text, assetPath) {
+  const processedText = applyElevenLabsSubstitutions(text.trim());
   const payload = JSON.stringify({
-    text: text.trim(),
+    text: processedText,
     model_id: ELEVENLABS_MODEL,
     voice_settings: { stability: 0.55, similarity_boost: 0.80 },
     pronunciation_dictionary_locators: [
