@@ -2,15 +2,13 @@
 
 VCR is a tool to implement "Training as Code": each part of a course is expressed as code. In this way a course can be updated with a git patch, without rerecording videos, terminal sessions or web sessions at all.
 
-VCR is a set of extensions to [Slidev]() integrating terminal rendering via [VHS](https://github.com/charmbracelet/vhs), web session rendering via [Playwright](https://playwright.dev/), video generation via [FFMpeg](https://www.ffmpeg.org/). The speech part can done via local models or (https://elevenlabs.io/).
+VCR is a set of extensions to [Slidev]() integrating terminal rendering via [VHS](https://github.com/charmbracelet/vhs), web session rendering via [Playwright](https://playwright.dev/), video generation via [FFMpeg](https://www.ffmpeg.org/). The speech part can done via local models or [11 labs](https://elevenlabs.io/).
 
 ## Installation
 
-- Install ffmpeg
-    `sudo apt install ffmpeg`
-- Install [Slidev and its dependencies] (https://sli.dev/guide/#create-locally)
-- Install [VHS] (go install github.com/charmbracelet/vhs@latest)
-    be sure to have the vhs command on your PATH!
+- Install ffmpeg: `sudo apt install ffmpeg`
+- Install [Slidev and its dependencies](https://sli.dev/guide/#create-locally)
+- Install VHS: `go install github.com/charmbracelet/vhs@latest`: be sure to have the vhs command on your PATH!
 - Clone this project
 
 ## Starting the slides
