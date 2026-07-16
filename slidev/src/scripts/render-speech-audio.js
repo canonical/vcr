@@ -131,7 +131,7 @@ function stripCachedBlocks(input) {
 
 function buildCachedBlock({ source, hash, mediaPath, format = "wav" }) {
   const encoded = Buffer.from(source, "utf8").toString("base64");
-  const audio = `<audio class="sli-speech-track" src="${mediaPath}" autoplay preload="auto"></audio>`;
+  const audio = `<audio class="sli-speech-track" src="${mediaPath}" preload="auto"></audio>`;
   return `${START} hash=${hash} format=${format} -->\n${audio}\n<!-- sli-speech:source\n${encoded}\n${END}`;
 }
 
