@@ -112,9 +112,14 @@ export async function synthesise(text, outPath) {
 
   try {
     // Run piper: echo text | piper --model <model> --output_file <wav>
+    // config file is model path + .json — piper v1.5 requires it
+    const configPath = model.endsWith(".onnx") ? model + ".json" : model;
+    const args = ["-m", model, "-f", tmp];
+    if (fs.existsSync(configPath)) args.push("-c", configPath);
+
     const result = spawnSync(
       bin,
-      ["--model", model, "--output_file", tmp],
+      args,
       {
         input: piperText,
         encoding: "utf8",
