@@ -112,7 +112,9 @@ const PAUSE_MAP_PIPER = {
  * @returns {string}
  */
 export function preprocess(text, { engine = "f5", model = "" } = {}) {
-  // 1. Pause tag substitutions
+  // 1. Pause tag substitutions — normalise single-bracket [tag] → [[tag]] first
+  text = text.replace(/\[(?!\[)(pause|break|longpause|dash|SLIDE)\](?!\])/g, "[[$1]]");
+
   const pauseMap = engine === "piper" ? PAUSE_MAP_PIPER
     : model.includes("multilingual") ? PAUSE_MAP_MULTILINGUAL
     : PAUSE_MAP_F5;
