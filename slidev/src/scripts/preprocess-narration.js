@@ -2,9 +2,10 @@
 /**
  * preprocess-narration.js — Convert narration markup to TTS-optimised plain text.
  *
- * Supports two engines:
+ * Supports engines:
  *   f5         — F5-TTS (character-level model, uses ellipsis for pauses)
  *   elevenlabs — ElevenLabs (uses commas for pauses + alias substitutions)
+ *   piper      — Piper TTS (comma pauses; markup stripped before shell invocation)
  *
  * Usage:
  *   node preprocess-narration.js <text>                        # stdin or inline text
@@ -89,6 +90,15 @@ const PAUSE_MAP_MULTILINGUAL = {
   "[SLIDE]":       "\n\n",
 };
 
+// Piper: commas for short pauses; sentence breaks for longer ones
+const PAUSE_MAP_PIPER = {
+  "[[pause]]": ", ",
+  "[[break]]": ". ",
+  "[[longpause]]": ". ",
+  "[[dash]]": " — ",
+  "[SLIDE]": ". ",
+};
+
 // ---------------------------------------------------------------------------
 // Main preprocess function
 // ---------------------------------------------------------------------------
@@ -97,13 +107,15 @@ const PAUSE_MAP_MULTILINGUAL = {
  *
  * @param {string} text        Raw narration script with markup tags
  * @param {object} [opts]
- * @param {string} [opts.engine="f5"]  "f5" or "elevenlabs"
+ * @param {string} [opts.engine="f5"]  "f5", "elevenlabs", or "piper"
  * @param {string} [opts.model=""]     ElevenLabs model id (affects pause rendering)
  * @returns {string}
  */
 export function preprocess(text, { engine = "f5", model = "" } = {}) {
   // 1. Pause tag substitutions
-  const pauseMap = model.includes("multilingual") ? PAUSE_MAP_MULTILINGUAL : PAUSE_MAP_F5;
+  const pauseMap = engine === "piper" ? PAUSE_MAP_PIPER
+    : model.includes("multilingual") ? PAUSE_MAP_MULTILINGUAL
+    : PAUSE_MAP_F5;
   for (const [tag, replacement] of Object.entries(pauseMap)) {
     text = text.split(tag).join(replacement);
   }
