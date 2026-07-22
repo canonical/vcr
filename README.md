@@ -89,24 +89,31 @@ Useful options:
 - `pnpm run playwright:render -- --dry-run` reports what would change without writing files.
 - `pnpm run playwright:render -- --skip-render` updates markdown and writes placeholder cache files without launching Chromium.
 
-## Speech audio in slides
+## Narration audio
 
-This project can also pre-render local text-to-speech narration into cached WAV files. Add a fenced `speech` or `tts` block to `slides.md`:
+Narration lives in a separate `narration.md` file alongside the slide `.md` files.
+This keeps slide layout and narration script independently editable.
 
-````md
-```speech name=intro
-Welcome to the MicroCloud lesson. This narration is generated locally and cached.
 ```
-````
+narration.md  →  narration:render  →  audio-cache/*.mp3 + durations.txt
+audio-cache/  →  narration:inject  →  <audio> tags injected into slide .md files
+```
 
-Run `pnpm run audio:render -- --model path/to/voice.onnx` (or the `speech:render` alias) or set `PIPER_MODEL=path/to/voice.onnx` before running the command. The command uses the local `piper` binary by default, writes WAV files under `audio-cache/`, and replaces each source block with an autoplaying background `<audio>` element. The original text is stored inside the generated markdown block, so re-running the command restores and re-renders changed narration text.
+See [NARRATION-PROCESS.md](slidev/src/NARRATION-PROCESS.md) for the full workflow,
+markup tag reference, and pronunciation substitution guide.
 
-Useful options:
+Quick start:
 
-- `pnpm run audio:render -- --file slides.md` renders a different markdown file.
-- `pnpm run audio:render -- --cache-dir audio-cache` changes the cache directory.
-- `pnpm run audio:render -- --tts-bin piper` uses a different local Piper-compatible binary.
-- `pnpm run audio:render -- --dry-run` reports what would change without writing files.
-- `pnpm run audio:render -- --skip-render` updates markdown and writes placeholder cache files without invoking the TTS model.
+```bash
+# Render narration audio for a module (ElevenLabs)
+pnpm narration:render -- ubuntu
 
-Browsers may delay audible autoplay until the deck receives a user gesture, but Slidev will load the generated track in the background when the slide is shown.
+# Inject <audio> tags into slide .md files
+pnpm narration:inject -- ubuntu
+
+# Record a narrated MP4
+pnpm record:video -- --module=ubuntu --mux
+```
+
+Browsers may delay audible autoplay until the deck receives a user gesture,
+but Slidev loads the audio track in the background when the slide is shown.

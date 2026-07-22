@@ -7,13 +7,10 @@
     "dev": "slidev --open",
     "export": "slidev export",
     "terminal:render": "node scripts/render-terminal-tapes.js",
-    "record:animated": "node scripts/record-slidev-animated.js",
+    "record:video": "node scripts/record-slidev-animated.js",
     "record-video": "node scripts/record-video.js",
-    "speech:render": "node scripts/render-speech-audio.js",
-    "audio:render": "node scripts/render-speech-audio.js",
     "narration:render": "node scripts/render-narration-audio.js",
     "narration:inject": "node scripts/inject-audio.js",
-    "record:video": "node scripts/record-slidev-animated.js",
     "playwright:render": "node scripts/render-playwright-videos.js"
   },
   "dependencies": {

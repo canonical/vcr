@@ -1,192 +1,120 @@
-# Narration Integration in VCR / Slidev
+# Narration Process
 
-How to embed narration text and pre-rendered audio into a Slidev deck using the VCR `sli-speech` mechanism.
+How to add narration audio to a Slidev module using the VCR narration pipeline.
 
----
+## Overview
 
-## How `sli-speech` works
-
-VCR extends Slidev with a `sli-speech` block convention. The flow is:
+Narration lives in a separate `narration.md` file, not inside the slide `.md` files.
+This keeps slide layout and narration script independent and independently editable.
 
 ```
-narration text in slides.md  →  render-speech-audio.js  →  audio-cache/*.wav
-                                                         →  slides.md updated with <audio> tag
+narration.md  →  narration:render  →  audio-cache/*.mp3 + durations.txt
+audio-cache/  →  narration:inject  →  <audio> tags injected into slide .md files
 ```
 
-The script (`pnpm audio:render` / `node scripts/render-speech-audio.js`) scans `slides.md`
-for speech source blocks, hashes their content, synthesises audio if not already cached,
-and rewrites the block in-place to include the rendered `<audio>` element.
+The `<audio class="sli-speech-track">` tags are picked up by `setup/root.ts` at
+runtime — slides auto-play their track when navigated to.
 
-Slidev renders the `<audio>` element directly — it auto-plays when the slide loads.
+## narration.md format
 
----
-
-## Step 1 — Write narration text into the slide
-
-Place the narration text in an HTML comment block **inside** the slide it belongs to,
-immediately after any content. Plain prose only — no markdown, no HTML.
+One `## Slide N: Title` section per slide that has narration:
 
 ```markdown
----
+## Slide 1: Introduction
 
-# History of Ubuntu & Canonical
+Welcome to the Ubuntu module. In this section we'll cover...
 
-Your slide content here...
+## Slide 2: What is Ubuntu
 
-<!--
-The story of Ubuntu is one of remarkable growth. What started as a desktop Linux
-distribution in 2004 evolved into the foundation of public cloud computing by 2008,
-and by 2020 had become the most popular OS on GitHub.
--->
-
----
+Ubuntu is a Linux distribution...
 ```
 
-The script identifies narration comments by the rule: an HTML comment block that
-contains no HTML tags — pure prose triggers synthesis. Blocks with tags are treated
-as regular Slidev slide comments and are ignored.
+Slides without a matching section get no audio. Gaps in numbering are fine.
 
-Alternatively, use a fenced code block with the `speech` or `tts` language tag:
+### Markup tags
 
-```markdown
-` ` `speech name=history-slide-1
-The story of Ubuntu is one of remarkable growth...
-` ` `
-```
+| Tag | Effect |
+|-----|--------|
+| `[[pause]]` | Short pause (~500ms) |
+| `[[break]]` | Paragraph pause (~1s) |
+| `[[longpause]]` | Section break (~2s) |
+| `[[dash]]` | Em-dash dramatic pause |
+| `[SLIDE]` | Slide transition pause |
+| `[[emph:word]]` | Emphasis — adds comma pause before/after |
+| `[[pronounce:phonetic]]` | Replace preceding word with phonetic form |
 
----
-
-## Step 2 — Render the audio
+## Rendering audio
 
 ```bash
-cd slidev/src
-pnpm audio:render
-# or:
-node scripts/render-speech-audio.js
+# Render all slides for a module (resume-aware — skips existing cache)
+pnpm narration:render -- ubuntu
+
+# Render a specific slide only
+pnpm narration:render -- ubuntu --slide=19
+
+# Force re-render even if cached
+pnpm narration:render -- ubuntu --force
+
+# Dry run — show what would be synthesised without calling the API
+pnpm narration:render -- ubuntu --dry-run
+
+# Render all modules
+pnpm narration:render -- --all
 ```
 
-By default this uses `piper` (local TTS). To use a different binary or model:
+Outputs:
+- `audio-cache/001.mp3`, `002.mp3`, … (per-slide MP3s, gitignored)
+- `audio-cache/manifest.json` (slide metadata)
+- `audio-cache/durations.txt` (slide durations for video recorder timing)
+
+### Config (env or `.env` in project root)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ELEVENLABS_API_KEY` | required | ElevenLabs API key |
+| `VCR_VOICE_ID` | `HEfF1IJ9HcifVBNWZdCQ` | Voice ID |
+| `VCR_MODEL` | `eleven_multilingual_v2` | Model |
+| `VCR_DICT_ID` | — | Pronunciation dictionary ID |
+| `VCR_DICT_VER` | — | Pronunciation dictionary version |
+
+## Injecting audio tags into slides
+
+After rendering, inject `<audio>` tags into the slide `.md` files:
 
 ```bash
-node scripts/render-speech-audio.js --tts-bin=piper --model=/path/to/model.onnx
+pnpm narration:inject -- ubuntu
+
+# Dry run
+pnpm narration:inject -- ubuntu --dry-run
+
+# Remove all audio tags
+pnpm narration:inject -- ubuntu --remove
 ```
 
-Other useful flags:
-- `--dry-run` — show what would change without writing anything
-- `--skip-render` — write placeholder `.wav` files (useful to test the pipeline without a TTS binary)
+This writes `<audio class="sli-speech-track" src="./audio-cache/NNN.mp3">` at the
+end of each matching slide's content block. Re-running is safe — existing tags are
+replaced, not duplicated.
 
-After rendering, `slides.md` is rewritten in-place. The comment block becomes:
-
-```markdown
-<!-- sli-speech:start hash=abc123def456 format=wav -->
-<audio class="sli-speech-track" src="./audio-cache/abc123def456.wav" autoplay preload="auto"></audio>
-<!-- sli-speech:source
-<base64-encoded original source>
-<!-- sli-speech:end -->
-```
-
-The original narration text is preserved base64-encoded in `sli-speech:source` so the
-script can reconstruct and re-hash it on subsequent runs. If the text changes, the hash
-changes, and the audio is re-rendered.
-
----
-
-## Step 3 — Use pre-rendered ElevenLabs MP3s instead of Piper
-
-The `render-speech-audio.js` script is wired for `piper` (local TTS), but the same
-`<audio>` tag mechanism works with any audio source — including the per-slide MP3s
-already generated by the partner enablement `generate_slide_audio.py` pipeline.
-
-**Option A — Drop-in: manually reference the MP3 in the slide**
-
-```markdown
----
-
-# History of Ubuntu & Canonical
-
-Your slide content here...
-
-<!-- sli-speech:start hash=manual format=mp3 -->
-<audio class="sli-speech-track" src="./audio-cache/history-slide-008.mp3" autoplay preload="auto"></audio>
-<!-- sli-speech:end -->
-
----
-```
-
-Copy or symlink the ElevenLabs MP3 into `audio-cache/` with a stable name.
-The script will leave manually-hashed blocks alone as long as the hash doesn't
-match any computed hash.
-
-**Option B — Extend `render-speech-audio.js` to call ElevenLabs**
-
-Replace `renderWithLocalModel()` with an ElevenLabs API call:
-
-```js
-async function renderWithElevenLabs(text, assetPath, { apiKey, voiceId, model }) {
-  const payload = JSON.stringify({
-    text,
-    model_id: model ?? 'eleven_multilingual_v2',
-    voice_settings: { stability: 0.55, similarity_boost: 0.80 },
-  });
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: 'POST',
-    headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
-    body: payload,
-  });
-  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text()}`);
-  await fs.writeFile(assetPath, Buffer.from(await res.arrayBuffer()));
-}
-```
-
-Then in `renderWithLocalModel` → swap to `renderWithElevenLabs`.
-Output file extension should become `.mp3`; update `buildCachedBlock` to use `format=mp3`.
-
----
-
-## Step 4 — Playback in Slidev
-
-No Slidev configuration is needed. The `<audio autoplay>` element fires when the
-slide renders. In presentation mode the narration plays as the slide appears.
-
-In non-interactive (video export) mode, `record-slidev-animated.js` uses a
-`durations-file` to hold each slide open long enough for the audio to finish.
-Match the wait duration to the audio length (in ms) for each slide.
-
-```
-# durations.txt — one value per click/advance step
-4200   # slide 1 narration
-3800   # slide 2 narration
-5100   # slide 3 narration
-```
+## Recording a narrated MP4
 
 ```bash
-node scripts/record-slidev-animated.js --durations-file=durations.txt
+# Capture slides + mux narration audio into a final MP4
+pnpm record:animated -- --module=ubuntu --mux
 ```
 
----
+Requires:
+- Slidev server running on the configured port
+- `audio-cache/durations.txt` present (produced by `narration:render`)
+- `ffmpeg` on PATH
 
-## Summary flow for a new slide with ElevenLabs narration
+Produces `<module>.mp4` alongside the intermediate WebM.
 
-```
-1. Write narration prose in an HTML comment in slides.md
-2. Run: python3 generate_slide_audio.py   (or synthesise_audio.sh)
-         → produces audio-cache/<name>.mp3
-3. Either:
-   a. Let render-speech-audio.js handle it (extend for ElevenLabs), OR
-   b. Manually embed the <audio> tag referencing the MP3
-4. pnpm dev — narration plays automatically in presentation mode
-5. For video export: set matching durations in durations.txt
-         → node scripts/record-slidev-animated.js --durations-file=durations.txt
-```
+## Pronunciation substitutions
 
----
+Common technical terms are pre-substituted for natural ElevenLabs pronunciation.
+The substitution table lives in `scripts/preprocess-narration.js`
+(`ELEVENLABS_SUBSTITUTIONS`). Add entries there for any terms that ElevenLabs
+mispronounces consistently.
 
-## File locations
-
-| File | Purpose |
-|---|---|
-| `slides.md` | Slide source; narration blocks live here |
-| `audio-cache/` | Rendered WAV/MP3 files referenced by `<audio>` tags |
-| `scripts/render-speech-audio.js` | Scans, synthesises, rewrites `slides.md` |
-| `scripts/record-slidev-animated.js` | Records video; accepts `--durations-file` for per-slide timing |
-| `scripts/record-video.js` | Simpler recorder with a hardcoded timeline |
+Current substitutions include: `MicroCloud` → `MICRO cloud`, `LXD` → `lex-dee`,
+`QEMU` → `kee-moo`, `systemd` → `system-D`, `/etc/` → `etsee slash`, and more.
