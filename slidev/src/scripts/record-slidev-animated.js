@@ -231,3 +231,58 @@ if (preciseTiming.file && preciseTiming.durations.length > step) {
 }
 
 console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);
+
+// ---------------------------------------------------------------------------
+// --mux: concatenate per-slide MP3s from audio-cache/ and mux into final MP4
+// ---------------------------------------------------------------------------
+const mux = process.argv.includes("--mux");
+const moduleArg = process.argv.find(a => a.startsWith("--module="))?.replace("--module=", "");
+
+if (mux) {
+  const { execSync } = await import("node:child_process");
+  const os = await import("node:os");
+
+  if (!moduleArg) {
+    console.error("--mux requires --module=<name> so audio-cache/ can be located");
+    process.exit(1);
+  }
+
+  const cacheDir  = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "slidev", moduleArg, "audio-cache");
+  const durFile   = path.join(cacheDir, "durations.txt");
+  const tmpAudio  = path.join(os.tmpdir(), `vcr-audio-${moduleArg}.mp3`);
+  const tmpConcat = path.join(os.tmpdir(), `vcr-concat-${moduleArg}.txt`);
+  const finalOut  = outputPath.replace(/\.webm$/, ".mp4").replace(/slidev-recording/, `${moduleArg}`);
+
+  if (!fs.existsSync(durFile)) {
+    console.error(`--mux: durations.txt not found at ${durFile}`);
+    process.exit(1);
+  }
+
+  // Build concat list in slide order from durations.txt
+  const slideNums = fs.readFileSync(durFile, "utf8")
+    .split("\n")
+    .map(l => l.trim().split(/\s+/)[0])
+    .filter(Boolean)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const concatLines = slideNums
+    .map(n => `file '${path.join(cacheDir, String(n).padStart(3, "0") + ".mp3"}}'`)
+    .join("\n");
+  fs.writeFileSync(tmpConcat, concatLines + "\n");
+
+  console.log(`\n[mux] Concatenating ${slideNums.length} audio files...`);
+  execSync(`ffmpeg -y -f concat -safe 0 -i "${tmpConcat}" -c copy "${tmpAudio}"`, { stdio: "inherit" });
+
+  console.log(`[mux] Converting video to MP4 and muxing audio...`);
+  execSync(
+    `ffmpeg -y -i "${outputPath}" -i "${tmpAudio}" ` +
+    `-c:v libx264 -pix_fmt yuv420p -movflags +faststart -c:a aac "${finalOut}"`,
+    { stdio: "inherit" }
+  );
+
+  fs.rmSync(tmpAudio, { force: true });
+  fs.rmSync(tmpConcat, { force: true });
+
+  console.log(`[mux] Done → ${finalOut}`);
+}

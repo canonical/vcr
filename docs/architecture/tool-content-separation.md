@@ -30,7 +30,8 @@ slides.md  ──→  vcr audio:render  ──→  audio-cache/
 
 **Pipeline:**
 ```
-vcr audio:render          →  audio-cache/
+vcr narration:render      →  audio-cache/
+vcr narration:inject      →  <audio> tags in slide .md files
 slidev build              →  dist/   (static Slidev SPA)
 inject imsmanifest.xml    →  dist/   (generated from slides.md front-matter)
 inject scorm-bridge.js    →  dist/   (Slidev plugin: reports progress/completion via SCORM 1.2 API)
@@ -71,11 +72,10 @@ slidev build  →  dist/
 
 **Pipeline:**
 ```
-vcr audio:render          →  audio-cache/
+vcr narration:render      →  audio-cache/
 vcr durations:generate    →  durations.txt   (max of audio/terminal/video per slide)
 slidev dev                →  :3030
-vcr record:animated       →  videos/slidev-recording.webm   (Playwright, timed by durations.txt)
-ffmpeg (automated)        →  videos/slidev-recording.mp4
+vcr record:video          →  videos/<module>.mp4   (Playwright capture + ffmpeg mux, timed by durations.txt)
 ```
 
 **Narration:** Always included — audio plays during Playwright recording and is captured in the WebM.
@@ -136,7 +136,8 @@ Makefile                    ← top-level build targets
 ```json
 {
   "scripts": {
-    "audio:render":       "vcr audio:render",
+    "narration:render":    "vcr narration:render",
+    "narration:inject":    "vcr narration:inject",
     "terminal:render":    "vcr terminal:render",
     "durations:generate": "vcr durations:generate",
     "record:video":       "vcr record:animated --durations-file=durations.txt",
@@ -156,7 +157,7 @@ course ?= portfolio-overview
 locale ?= en
 
 audio:
-	pnpm audio:render --locale $(locale)
+	pnpm narration:render --locale $(locale)
 
 record:
 	pnpm durations:generate --course $(course) --locale $(locale)
@@ -192,9 +193,9 @@ export default {
 }
 ```
 
-**Runtime override:** `--substitutions-file=substitutions.json` on any `audio:render` call.
+**Runtime override:** `--substitutions-file=substitutions.json` on any `narration:render` call.
 
-The built-in Canonical substitution table lives in `scripts/render-speech-audio.js` (`ELEVENLABS_SUBSTITUTIONS`). It is Canonical-specific but ships with VCR for now since VCR is a Canonical-internal tool. If VCR is ever open-sourced, the built-in table moves to `partner-enablement/vcr.config.js` and the built-in default becomes empty.
+The built-in Canonical substitution table lives in `scripts/preprocess-narration.js` (`ELEVENLABS_SUBSTITUTIONS`). It is Canonical-specific but ships with VCR for now since VCR is a Canonical-internal tool. If VCR is ever open-sourced, the built-in table moves to `partner-enablement/vcr.config.js` and the built-in default becomes empty.
 
 ---
 
@@ -202,9 +203,11 @@ The built-in Canonical substitution table lives in `scripts/render-speech-audio.
 
 | Script | Destination | Status |
 |---|---|---|
-| `preprocess_narration.py` substitutions | `scripts/render-speech-audio.js` | ✅ Done (PR #33) |
-| `generate_slide_audio.py` | Superseded by `audio:render` | Replace with content restructure |
-| `synthesise_audio.sh` | Superseded by `vcr audio:render --all` | Replace |
+| `preprocess_narration.py` | `scripts/preprocess-narration.js` | ✅ Done (this PR) |
+| `vcr-audio-gen.py` | `scripts/render-narration-audio.js` | ✅ Done (this PR) |
+| `inject-audio-tags.py` | `scripts/inject-audio.js` | ✅ Done (this PR) |
+| `generate_slide_audio.py` | Superseded by `narration:render` | ✅ Replaced |
+| `synthesise_audio.sh` | Superseded by `vcr narration:render --all` | ✅ Replaced |
 | `build_manifest.py` | `scripts/build-manifest.js` | Pending |
 | `build_player.sh` | Superseded by `vcr build:scorm` (Slidev-based) | Replace |
 | `build_scorm.sh` | `scripts/build-scorm.sh` | Pending |

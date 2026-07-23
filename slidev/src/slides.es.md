@@ -339,11 +339,7 @@ Tradujimos un curso existente (diapositivas y vídeo) del español al inglés �
 El resultado: un cambio de contenido se propaga a todos los idiomas automáticamente — igual que un cambio de código se propaga a través de un pipeline de CI.
 </div>
 
-<!-- sli-speech:start hash=bc4b36d48b7c format=mp3 -->
 <audio class="sli-speech-track" src="./audio-cache/bc4b36d48b7c.mp3" preload="auto"></audio>
-<!-- sli-speech:source
-PCEtLQpNaSBwYXJ0ZSBkZWwgcHJveWVjdG8gY29tZW56w7MgY29uIGVsIG9iamV0aXZvIGRlIHRyYWR1Y2lyIHVuYSBwcmVzZW50YWNpw7NuIG1hZXN0cmEgZW4gZXNwYcOxb2w6IHRyYWR1Y2llbmRvIHRhbnRvIGVsIGNvbnRlbmlkbyBkZSBsYXMgZGlhcG9zaXRpdmFzIGFsIGluZ2zDqXMgY29tbyBncmFiYW5kbyB1bmEgbnVldmEgcGlzdGEgZGUgYXVkaW8gZW4gaW5nbMOpcy4gRW4gbHVnYXIgZGUgZ3JhYmFyIGxhIGZvcm1hY2nDs24gY29tcGxldGEsIHF1ZSBkdXJhIHZhcmlvcyBkw61hcywgY29uIG1pIHByb3BpYSB2b3osIGNvbWVuY8OpIGEgaW52ZXN0aWdhciBjw7NtbyBwb2Ryw61hbW9zIHVzYXIgTExNcyBwYXJhIGFtYmFzIHBhcnRlcyBkZWwgcHJvY2Vzby4gRGUgaGVjaG8sIG5pIHNpcXVpZXJhIGVzdG95IGxleWVuZG8gZXN0byBhaG9yYSBtaXNtby4uLgotLT4=
-<!-- sli-speech:end -->
 
 ---
 
