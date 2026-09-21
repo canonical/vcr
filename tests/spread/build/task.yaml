@@ -1,0 +1,38 @@
+summary: Verify that the VCR snap builds and contains expected binaries
+
+execute: |
+  echo "=== Building VCR snap ==="
+  cd /vcr
+  snapcraft pack --use-lxd
+
+  SNAP_FILE=$(ls vcr_*.snap 2>/dev/null | head -1)
+  if [ -z "$SNAP_FILE" ]; then
+    echo "FATAL: snap file not found after build"
+    exit 1
+  fi
+  echo "Built: $SNAP_FILE ($(du -h "$SNAP_FILE" | cut -f1))"
+
+  echo ""
+  echo "=== Verifying snap contents ==="
+
+  check() {
+    local pattern="$1" label="$2"
+    if unsquashfs -l "$SNAP_FILE" 2>/dev/null | grep -q "$pattern"; then
+      echo "  PASS: $label"
+    else
+      echo "  FAIL: $label (pattern '$pattern' not found)"
+      exit 1
+    fi
+  }
+
+  check "bin/vcr"             "CLI entry point"
+  check "bin/slidev"          "slidev wrapper"
+  check "bin/vhs"             "VHS terminal recorder"
+  check "bin/ffmpeg"          "FFmpeg"
+  check "bin/piper"           "Piper TTS"
+  check "bin/node"            "Node.js runtime"
+  check "playwright-browsers" "Playwright + Chromium browsers"
+  check "\.vite"              "Vite cache symlink → /tmp"
+
+  echo ""
+  echo "=== All checks passed ==="
