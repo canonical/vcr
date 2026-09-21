@@ -2,7 +2,7 @@ summary: Verify that the VCR snap builds and contains expected binaries
 
 execute: |
   echo "=== Building VCR snap ==="
-  cd /vcr
+  cd ../../
   snapcraft pack --use-lxd
 
   SNAP_FILE=$(ls vcr_*.snap 2>/dev/null | head -1)

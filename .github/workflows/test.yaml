@@ -20,7 +20,10 @@ jobs:
 
       - name: Install spread
         run: |
-          sudo snap install spread
+          sudo snap install go --classic
+          go install github.com/canonical/spread/cmd/spread@latest
+          sudo cp ~/go/bin/spread /usr/local/bin/
+
       - name: Run spread tests
         run: |
           spread 
