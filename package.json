@@ -1,0 +1,27 @@
+{
+  "name": "@canonical/vcr",
+  "version": "0.1.0",
+  "description": "Training as Code \u2014 build courses from markdown slides",
+  "type": "module",
+  "bin": {
+    "vcr": "./bin/vcr.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "components/",
+    "styles/",
+    "snippets/",
+    "setup/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/canonical/vcr"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@slidev/cli": "^52.16.0",
+    "@slidev/theme-default": "latest",
+    "@slidev/theme-seriph": "latest"
+  }
+}

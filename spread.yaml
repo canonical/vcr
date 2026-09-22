@@ -1,0 +1,27 @@
+project: vcr
+
+environment:
+  SNAPCRAFT_BUILD_ENVIRONMENT: host
+  SNAPCRAFT_ENABLE_DEVELOPER_DEBUG: "1"
+  SNAPCRAFT_PACKAGE_TYPE: snap
+
+backends:
+  lxd:
+    systems:
+      - ubuntu-24.04
+
+prepare: |
+  apt-get update -qq
+  apt-get install -y -qq snapd
+  snap wait system seed.loaded
+  [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
+  snap install snapcraft --classic --channel=latest/stable
+
+path: /home/test/src/github.com/canonical/spread
+
+restore: |
+  cd /vcr && snapcraft clean 2>/dev/null || true
+
+suites:
+  tests/:
+    summary: Build verification — does the snap pack successfully?

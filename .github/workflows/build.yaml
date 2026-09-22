@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  pack:
+    name: Build & Package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LXD
+        run: |
+          sudo snap install lxd --channel=5.21/stable
+          sudo lxd init --auto
+          sudo lxd waitready --timeout=60
+
+      - name: Build snap
+        run: |
+          sudo snap install snapcraft --classic --channel=latest/stable
+          snapcraft pack --use-lxd
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcr-snap
+          path: vcr_*.snap
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          SNAP_FILE=$(ls vcr_*.snap | head -1)
+          echo "### Build Summary :package:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snap:** $SNAP_FILE" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Size:** $(du -h "$SNAP_FILE" | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit:** ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
