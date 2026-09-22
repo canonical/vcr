@@ -43,10 +43,9 @@ jobs:
           echo "Snap version: ${VER}"
 
       - name: Setup LXD
-        run: |
-          sudo snap install lxd --channel=5.21/stable
-          sudo lxd init --auto
-          sudo lxd waitready --timeout=60
+        uses: canonical/setup-lxd@v1
+        with:
+          channel: 5.21/stable
 
       - name: Build snap
         env:
