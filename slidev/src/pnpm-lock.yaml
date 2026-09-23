@@ -2957,8 +2957,8 @@ packages:
     resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
-  valibot@1.4.1:
-    resolution: {integrity: sha512-klCmFTz2jeDluy9RwX+F884TCiogtdBJ/YaxSx1EOBYXa3NXNWj8kR1jjN8rzluwojJVWWaHJ4r1U5LfICnM3g==}
+  valibot@1.5.0:
+    resolution: {integrity: sha512-nil6AkP2TChWL43Z5uJ6GTxX01CUA+g8LWUM+N/rB9NBbkUMaUsi9PUNzlUPgoKASgmx9f7eGOYpJ04/fSa6FQ==}
     peerDependencies:
       typescript: '>=5'
     peerDependenciesMeta:
@@ -4471,9 +4471,9 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
-  '@valibot/to-json-schema@1.7.1(valibot@1.4.1(typescript@6.0.3))':
+  '@valibot/to-json-schema@1.7.1(valibot@1.5.0(typescript@6.0.3))':
     dependencies:
-      valibot: 1.4.1(typescript@6.0.3)
+      valibot: 1.5.0(typescript@6.0.3)
 
   '@vitejs/devtools-kit@0.3.3(typescript@6.0.3)(vite@8.0.16(@types/node@22.19.21)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
@@ -5071,14 +5071,14 @@ snapshots:
 
   devframe@0.5.4(typescript@6.0.3):
     dependencies:
-      '@valibot/to-json-schema': 1.7.1(valibot@1.4.1(typescript@6.0.3))
+      '@valibot/to-json-schema': 1.7.1(valibot@1.5.0(typescript@6.0.3))
       birpc: 4.0.0
       cac: 7.0.0
       h3: 2.0.1-rc.22
       mrmime: 2.0.1
       nostics: 0.2.0
       pathe: 2.0.3
-      valibot: 1.4.1(typescript@6.0.3)
+      valibot: 1.5.0(typescript@6.0.3)
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -6525,7 +6525,7 @@ snapshots:
 
   uuid@14.0.0: {}
 
-  valibot@1.4.1(typescript@6.0.3):
+  valibot@1.5.0(typescript@6.0.3):
     optionalDependencies:
       typescript: 6.0.3
 
