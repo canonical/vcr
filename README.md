@@ -1,4 +1,4 @@
-# VCR — Training as Code
+# VCR — Video Course Recorder
 
 VCR turns training courses into code. Each slide, terminal demo, browser walkthrough,
 and narration is expressed as source files. Courses are updated with a git patch —
