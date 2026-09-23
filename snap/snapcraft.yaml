@@ -1,0 +1,128 @@
+name: vcr
+title: VCR
+base: core24
+version: '0.1.0'
+summary: Training as Code — build courses from markdown slides
+description: |
+  VCR is a tool to implement "Training as Code". Each part of a course is
+  expressed as code (markdown + scripts). Courses can be updated with a git
+  patch, without re-recording videos, terminal sessions, or web demos.
+
+  Features:
+  - Terminal recordings via VHS (render-terminal)
+  - Browser recordings via Playwright (render-playwright)
+  - Speech synthesis via Piper (local) or ElevenLabs (cloud) (render-audio)
+  - Timed MP4 video generation (record-video)
+  - SCORM 1.2 packages for LMS delivery (build-scorm)
+  - Static site generation for live presenting (build-slides)
+
+grade: stable
+confinement: classic
+license: Apache-2.0
+contact: https://github.com/canonical/vcr/issues
+issues: https://github.com/canonical/vcr/issues
+source-code: https://github.com/canonical/vcr
+website: https://github.com/canonical/vcr
+
+apps:
+  vcr:
+    command: bin/vcr
+    environment:
+      PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
+      PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
+
+parts:
+  vcr-source:
+    plugin: npm
+    source: .
+    npm-include-node: true
+    npm-node-version: '22'
+    stage-snaps:
+      - ffmpeg/latest/stable
+      - piper-tts/edge
+    override-build: |
+      craftctl default
+      # Install slidev globally so 'slidev' is on $SNAP/bin
+      npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
+      npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
+      npm install -g @slidev/theme-seriph --prefix "${CRAFT_PART_INSTALL}"
+      # Vite creates its dep cache in node_modules/.vite relative to the
+      # first node_modules it finds walking up from the slidev binary. In
+      # a snap that means the read-only squashfs, which fails. Create a
+      # symlink so the kernel redirects writes to a writable location, and
+      # a wrapper that ensures the target exists at runtime.
+      SLIDEV_NM="${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/node_modules"
+      mkdir -p "${SLIDEV_NM}"
+      ln -sf /tmp/vcr-vite-cache "${SLIDEV_NM}/.vite"
+      # Wrap slidev to ensure /tmp/vcr-vite-cache exists at runtime
+      mv "${CRAFT_PART_INSTALL}/bin/slidev" "${CRAFT_PART_INSTALL}/bin/slidev.real"
+      cat > "${CRAFT_PART_INSTALL}/bin/slidev" << 'WRAPPER'
+      #!/bin/sh
+      mkdir -p /tmp/vcr-vite-cache
+      exec "${SNAP}/bin/slidev.real" "$@"
+      WRAPPER
+      chmod +x "${CRAFT_PART_INSTALL}/bin/slidev"
+      # Organize scripts from slidev/src/ to top level
+      mkdir -p "${CRAFT_PART_INSTALL}/scripts"
+      cp -r "${CRAFT_PART_BUILD}/slidev/src/scripts/"* "${CRAFT_PART_INSTALL}/scripts/"
+      mkdir -p "${CRAFT_PART_INSTALL}/components"
+      cp -r "${CRAFT_PART_BUILD}/slidev/src/components/"* "${CRAFT_PART_INSTALL}/components/" 2>/dev/null || true
+      mkdir -p "${CRAFT_PART_INSTALL}/styles"
+      cp -r "${CRAFT_PART_BUILD}/slidev/src/styles/"* "${CRAFT_PART_INSTALL}/styles/" 2>/dev/null || true
+      mkdir -p "${CRAFT_PART_INSTALL}/snippets"
+      cp -r "${CRAFT_PART_BUILD}/slidev/src/snippets/"* "${CRAFT_PART_INSTALL}/snippets/" 2>/dev/null || true
+      mkdir -p "${CRAFT_PART_INSTALL}/setup"
+      cp -r "${CRAFT_PART_BUILD}/slidev/src/setup/"* "${CRAFT_PART_INSTALL}/setup/" 2>/dev/null || true
+      # Ensure bin/vcr lands in the right place
+      mkdir -p "${CRAFT_PART_INSTALL}/bin"
+      cp "${CRAFT_PART_BUILD}/bin/vcr.js" "${CRAFT_PART_INSTALL}/bin/vcr"
+      chmod +x "${CRAFT_PART_INSTALL}/bin/vcr"
+
+  vhs:
+    plugin: go
+    source: https://github.com/charmbracelet/vhs
+    source-type: git
+    source-tag: v0.9.0
+    build-snaps:
+      - go/latest/stable
+    build-environment:
+      - CGO_ENABLED: "0"
+    organize:
+      bin/vhs: bin/vhs
+
+  playwright-browsers:
+    plugin: nil
+    after: [vcr-source]
+    build-packages:
+      - libnss3
+      - libnspr4
+      - libatk1.0-0t64
+      - libatk-bridge2.0-0t64
+      - libcups2t64
+      - libdrm2
+      - libdbus-1-3
+      - libxkbcommon0
+      - libxcomposite1
+      - libxdamage1
+      - libxfixes3
+      - libxrandr2
+      - libgbm1
+      - libpango-1.0-0
+      - libcairo2
+      - libasound2t64
+    override-build: |
+      set -eu
+      PLAYWRIGHT_VERSION="1.61.0"
+      BROWSERS_DIR="${CRAFT_PART_INSTALL}/playwright-browsers"
+
+      "${CRAFT_STAGE}/bin/npm" install "playwright@${PLAYWRIGHT_VERSION}" \
+        --prefix "${CRAFT_PART_BUILD}"
+      PLAYWRIGHT_BROWSERS_PATH="${BROWSERS_DIR}" \
+        "${CRAFT_PART_BUILD}/node_modules/.bin/playwright" install chromium
+
+      mkdir -p "${CRAFT_PART_INSTALL}/lib/node_modules"
+      cp -r "${CRAFT_PART_BUILD}/node_modules/playwright" \
+        "${CRAFT_PART_INSTALL}/lib/node_modules/"
+    prime:
+      - playwright-browsers/
+      - lib/node_modules/playwright/
