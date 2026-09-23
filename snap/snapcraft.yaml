@@ -1,4 +1,5 @@
 name: vcr
+title: VCR
 base: core24
 version: '0.1.0'
 summary: Training as Code — build courses from markdown slides
@@ -17,6 +18,11 @@ description: |
 
 grade: stable
 confinement: classic
+license: Apache-2.0
+contact: https://github.com/canonical/vcr/issues
+issues: https://github.com/canonical/vcr/issues
+source-code: https://github.com/canonical/vcr
+website: https://github.com/canonical/vcr
 
 apps:
   vcr:
