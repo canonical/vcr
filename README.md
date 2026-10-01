@@ -153,7 +153,9 @@ Add a fenced `playwright` block:
 ````md
 ```playwright name=demo width=1280 height=720
 export default async function ({ page }) {
-  await page.goto("https://example.com");
+  await page.goto("https://example.com", {
+    waitUntil: "domcontentloaded",
+  });
   await page.getByRole("heading", { name: "Example Domain" }).waitFor();
   await page.waitForTimeout(1000);
 }
