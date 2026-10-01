@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# VCR snap smoke test — run after `snap install vcr_*.snap --dangerous --classic`
+# VCR snap smoke test — run after `snap install video-course-recorder_*.snap --dangerous --classic`
 set -euo pipefail
 
 RED='\033[0;31m'
@@ -19,10 +19,20 @@ echo ""
 
 # ── 1. Snap installed ──────────────────────────────────────────────────
 echo "[1] Snap installation"
-if snap list vcr &>/dev/null; then
-  pass "vcr snap is installed ($(snap list vcr | awk 'NR>1{print $2, $3}'))"
+if snap list video-course-recorder &>/dev/null; then
+  pass "vcr snap is installed ($(snap list video-course-recorder | awk 'NR>1{print $2, $3}'))"
 else
-  fail "vcr snap is not installed" "run: sudo snap install ./vcr_*.snap --dangerous --classic"
+  fail "vcr snap is not installed" "run: sudo snap install ./video-course-recorder_*.snap --dangerous --classic"
+fi
+echo ""
+
+# ── 1b. Create vcr alias (store auto-alias is absent on --dangerous installs) ─
+echo "[1b] vcr alias"
+sudo snap alias video-course-recorder vcr
+if command -v vcr &>/dev/null; then
+  pass "created alias: video-course-recorder → vcr ($(which vcr))"
+else
+  fail "vcr alias not available after snap alias" "run: sudo snap alias video-course-recorder vcr"
 fi
 echo ""
 
@@ -53,8 +63,8 @@ for bin in node slidev vhs ffmpeg ffprobe piper; do
   if command -v "$bin" &>/dev/null; then
     pass "$bin is on PATH ($(which "$bin"))"
   else
-    # piper might be in /snap/vcr/current/usr/bin via stage-snap
-    found=$(find /snap/vcr/current -name "$bin" -type f -o -name "$bin" -type l 2>/dev/null | head -1)
+    # piper might be in /snap/video-course-recorder/current/usr/bin via stage-snap
+    found=$(find /snap/video-course-recorder/current -name "$bin" -type f -o -name "$bin" -type l 2>/dev/null | head -1)
     if [ -n "$found" ]; then
       pass "$bin exists in snap ($found)"
     else
@@ -84,7 +94,7 @@ else
 fi
 
 # Check that the wrapper + real symlink exist
-SLIDEV_REAL="/snap/vcr/current/bin/slidev.real"
+SLIDEV_REAL="/snap/video-course-recorder/current/bin/slidev.real"
 if [ -L "$SLIDEV_REAL" ] || [ -f "$SLIDEV_REAL" ]; then
   pass "slidev.real exists (wrapper delegates correctly)"
 else
@@ -94,7 +104,7 @@ echo ""
 
 # ── 6. Vite cache symlink ──────────────────────────────────────────────
 echo "[6] Vite cache redirect"
-VITE_SYMLINK="/snap/vcr/current/lib/node_modules/@slidev/cli/node_modules/.vite"
+VITE_SYMLINK="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/node_modules/.vite"
 if [ -L "$VITE_SYMLINK" ]; then
   TARGET=$(readlink "$VITE_SYMLINK" 2>/dev/null || echo "unknown")
   if [[ "$TARGET" == /tmp/* ]]; then
@@ -109,7 +119,7 @@ echo ""
 
 # ── 7. Playwright browsers ─────────────────────────────────────────────
 echo "[7] Playwright + Chromium"
-PW_BROWSERS="/snap/vcr/current/playwright-browsers"
+PW_BROWSERS="/snap/video-course-recorder/current/playwright-browsers"
 if [ -d "$PW_BROWSERS/chromium-"* ]; then
   pass "Chromium browser bundled ($(ls "$PW_BROWSERS" | grep chromium | head -1))"
 else
@@ -118,7 +128,7 @@ fi
 
 # Verify PLAYWRIGHT_BROWSERS_PATH is set in snap env
 PW_ENV=$(vcr --help 2>&1; echo "dummy") # dummy to avoid masking exit code
-if [ -d "/snap/vcr/current/playwright-browsers" ]; then
+if [ -d "/snap/video-course-recorder/current/playwright-browsers" ]; then
   pass "PLAYWRIGHT_BROWSERS_PATH present in snap"
 else
   fail "PLAYWRIGHT_BROWSERS_PATH missing" "check snap environment"
