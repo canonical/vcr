@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@slidev/cli':
         specifier: ^52.16.0
-        version: 52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.2.0)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)
+        version: 52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)
       '@slidev/theme-default':
         specifier: latest
         version: 0.25.0
@@ -2206,6 +2206,9 @@ packages:
   linkify-it@5.0.1:
     resolution: {integrity: sha512-wVoTjP4Q6R0NW5hiZkVJaFZPWgtXfoGF+6LucL3/FtiNjmcHhYjEr5f1Kqjirc1nBW07J/ZuRFumqr2oqccEWg==}
 
+  linkify-it@5.0.2:
+    resolution: {integrity: sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q==}
+
   local-pkg@1.2.1:
     resolution: {integrity: sha512-++gUqRDEvcnN6Zhqrr+y/CkVEHhlrR96vZn3nZZPYzMcBUyBtTKzB9NadClFIsIVSsu+3i9tfk/erqy9kAmt7Q==}
     engines: {node: '>=14'}
@@ -2250,8 +2253,8 @@ packages:
     peerDependencies:
       markdown-it: '>= 13.0.0'
 
-  markdown-it@14.2.0:
-    resolution: {integrity: sha512-1TGiQiJVRQ3NPmZH6sx5Cfnmg6GQm9jvC1ch4TK511NjSJvjzKLzn5pPfZRNZkRPZP0HqCioSndqH8v2nRaWVQ==}
+  markdown-it@14.3.2:
+    resolution: {integrity: sha512-sHHjZ5fJKlgrG4qns2YwVcdNep35h5fERrfkD2YNsb9UFk0UIHarbiTaHKVMlPuWAoiilyK8Fv/jAm11slsY7Q==}
     hasBin: true
 
   markdown-table@3.0.4:
@@ -3345,11 +3348,11 @@ snapshots:
 
   '@chevrotain/types@11.1.2': {}
 
-  '@comark/markdown-it@0.3.4(@types/markdown-it@14.1.2)(markdown-it@14.2.0)':
+  '@comark/markdown-it@0.3.4(@types/markdown-it@14.1.2)(markdown-it@14.3.2)':
     dependencies:
       '@types/markdown-it': 14.1.2
       js-yaml: 4.2.0
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
 
   '@devframes/hub@0.5.4(devframe@0.5.4(typescript@6.0.3))':
     dependencies:
@@ -3448,14 +3451,14 @@ snapshots:
   '@mdit-vue/plugin-component@3.0.2':
     dependencies:
       '@types/markdown-it': 14.1.2
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
 
   '@mdit-vue/plugin-frontmatter@3.0.2':
     dependencies:
       '@mdit-vue/types': 3.0.2
       '@types/markdown-it': 14.1.2
       gray-matter: 4.0.3
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
 
   '@mdit-vue/types@3.0.2': {}
 
@@ -3811,7 +3814,7 @@ snapshots:
 
   '@shikijs/markdown-it@4.2.0':
     dependencies:
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
       shiki: 4.2.0
 
   '@shikijs/monaco@4.2.0':
@@ -3850,7 +3853,7 @@ snapshots:
       floating-vue: 5.2.2(@nuxt/kit@3.21.8)(vue@3.5.38(typescript@6.0.3))
       lz-string: 1.5.0
       magic-string: 0.30.21
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
       mdast-util-from-markdown: 2.0.3(supports-color@10.2.2)
       mdast-util-gfm: 3.1.0(supports-color@10.2.2)
       mdast-util-to-hast: 13.2.1
@@ -3866,11 +3869,11 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@slidev/cli@52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.2.0)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)':
+  '@slidev/cli@52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)':
     dependencies:
       '@antfu/ni': 30.1.0
       '@antfu/utils': 9.3.0
-      '@comark/markdown-it': 0.3.4(@types/markdown-it@14.1.2)(markdown-it@14.2.0)
+      '@comark/markdown-it': 0.3.4(@types/markdown-it@14.1.2)(markdown-it@14.3.2)
       '@iconify-json/carbon': 1.2.23
       '@iconify-json/ph': 1.2.2
       '@iconify-json/svg-spinners': 1.2.4
@@ -3904,7 +3907,7 @@ snapshots:
       magic-string-stack: 1.1.0
       markdown-exit: 1.0.0-beta.9
       markdown-it-footnote: 4.0.0
-      markdown-it-github-alerts: 1.0.1(markdown-it@14.2.0)
+      markdown-it-github-alerts: 1.0.1(markdown-it@14.3.2)
       mlly: 1.8.2
       monaco-editor: 0.55.1
       obug: 2.1.3
@@ -5493,6 +5496,10 @@ snapshots:
     dependencies:
       uc.micro: 2.1.0
 
+  linkify-it@5.0.2:
+    dependencies:
+      uc.micro: 2.1.0
+
   local-pkg@1.2.1:
     dependencies:
       mlly: 1.8.2
@@ -5551,15 +5558,15 @@ snapshots:
 
   markdown-it-footnote@4.0.0: {}
 
-  markdown-it-github-alerts@1.0.1(markdown-it@14.2.0):
+  markdown-it-github-alerts@1.0.1(markdown-it@14.3.2):
     dependencies:
-      markdown-it: 14.2.0
+      markdown-it: 14.3.2
 
-  markdown-it@14.2.0:
+  markdown-it@14.3.2:
     dependencies:
       argparse: 2.0.1
       entities: 4.5.0
-      linkify-it: 5.0.1
+      linkify-it: 5.0.2
       mdurl: 2.0.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
