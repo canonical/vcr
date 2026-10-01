@@ -15,7 +15,10 @@ Built on [Slidev](https://sli.dev) and bundled as a single snap with:
 ```bash
 # Build & install the snap
 snapcraft pack --use-lxd
-sudo snap install ./vcr_0.1.0_amd64.snap --dangerous --classic
+sudo snap install ./video-course-recorder_0.1.0_amd64.snap --dangerous --classic
+
+# Local/dangerous installs don't get the store auto-alias, so add it manually:
+sudo snap alias video-course-recorder vcr
 
 # Test it
 ./snap/test-smoke.sh

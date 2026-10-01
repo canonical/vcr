@@ -1,5 +1,5 @@
-name: vcr
-title: VCR
+name: video-course-recorder
+title: Video Course Recorder
 base: core24
 version: '0.1.0'
 summary: Training as Code — build courses from markdown slides
@@ -25,8 +25,10 @@ source-code: https://github.com/canonical/vcr
 website: https://github.com/canonical/vcr
 
 apps:
-  vcr:
+  video-course-recorder:
     command: bin/vcr
+    aliases:
+      - vcr
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH

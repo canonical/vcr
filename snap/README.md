@@ -107,12 +107,13 @@ package.json           ← root package.json (npm plugin needs this)
 snapcraft pack --use-lxd
 ```
 
-Output: `vcr_<version>_amd64.snap`
+Output: `video-course-recorder_<version>_amd64.snap`
 
 ## Installing
 
 ```bash
-sudo snap install ./vcr_*.snap --dangerous --classic
+sudo snap install ./video-course-recorder_*.snap --dangerous --classic
+sudo snap alias video-course-recorder vcr   # local installs lack the store auto-alias
 vcr --help
 ```
 
