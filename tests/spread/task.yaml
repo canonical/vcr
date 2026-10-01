@@ -28,6 +28,7 @@ execute: |
   check "bin/vcr"             "CLI entry point"
   check "bin/slidev"          "slidev wrapper"
   check "bin/vhs"             "VHS terminal recorder"
+  check "bin/ttyd"            "ttyd interactive terminal server"
   check "bin/ffmpeg"          "FFmpeg"
   check "bin/piper"           "Piper TTS"
   check "bin/node"            "Node.js runtime"
