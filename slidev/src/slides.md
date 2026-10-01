@@ -270,15 +270,21 @@ export default async function ({ page }) {
     return point;
   };
 
-  await page.goto("https://docs.ubuntu.com/");
-  await page.waitForLoadState("domcontentloaded");
+  await page.goto("https://docs.ubuntu.com/", {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+
   await page.mouse.move(120, 120, { steps: 20 });
   await pause(1200);
 
-  const jujuLink = page.getByRole("link", { name: /^LXD$/i }).first();
-  await jujuLink.waitFor();
-  await clickLikeHuman(jujuLink);
-  await page.waitForLoadState("domcontentloaded");
+  const lxdLink = page.getByRole("link", { name: /^LXD$/i }).first();
+  await lxdLink.waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
+  await clickLikeHuman(lxdLink);
+
   await pause(1500);
 
   for (const delta of [220, 220, 220, 220]) {
