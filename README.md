@@ -165,6 +165,28 @@ export default async function ({ page }) {
 Then run `vcr render-playwright <module>`. The renderer records the browser context
 as WebM and caches videos under `playwright-cache/`.
 
+Each session also receives a `demo` helper for guided, learner-friendly
+interaction: a visible pointer that travels to a target, a temporary highlight,
+readable typing, and instructional pauses.
+
+````md
+```playwright name=guided width=1280 height=720
+export default async function ({ page, demo }) {
+  await page.goto("https://example.com");
+  await demo.highlight(page.getByRole("heading", { name: "Example Domain" }), 1200);
+  await demo.click(page.getByRole("link", { name: "More information" }));
+  await demo.type(page.getByRole("searchbox"), "microcloud");
+  await demo.wait(800);
+}
+```
+````
+
+The helper is a thin layer over native Playwright locators and never replaces
+navigation, locators, or assertions. See [docs/playwright-actions.md](docs/playwright-actions.md)
+for the full action list and configuration, and
+[slidev/src/playwright-actions-example.md](slidev/src/playwright-actions-example.md)
+for a renderable, product-neutral example.
+
 ### Speech audio in slides
 
 Add a fenced `speech` block:

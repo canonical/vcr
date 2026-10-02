@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
+import { createTrainingActions } from "./training-actions.js";
 
 const DEFAULT_MARKDOWN = "slides.md";
 const DEFAULT_CACHE_DIR = "playwright-cache";
@@ -113,6 +114,7 @@ async function renderWithPlaywright(script, assetPath, options) {
     recordVideo: { dir: tmpDir, size: { width, height } },
   });
   const page = await context.newPage();
+  const demo = createTrainingActions(page);
 
   try {
     const mod = await import(pathToFileURL(scriptPath).href);
@@ -120,7 +122,7 @@ async function renderWithPlaywright(script, assetPath, options) {
     if (typeof runSession !== "function") {
       throw new Error("Playwright block must export a default function or named run function");
     }
-    await runSession({ page, context, browser, output: assetPath });
+    await runSession({ page, context, browser, output: assetPath, demo });
   } finally {
     await page.close().catch(() => {});
     await context.close().catch(() => {});
@@ -180,7 +182,10 @@ function hashScript(script) {
 }
 
 function blockHashVersion() {
-  return "sli-playwright-v1";
+  // v2: browser recordings now include the training action overlay (visible
+  // pointer and highlight). Bumping the version invalidates cached videos that
+  // were recorded before the action library existed.
+  return "sli-playwright-v2";
 }
 
 function slug(input) {
