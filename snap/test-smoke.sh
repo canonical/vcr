@@ -59,7 +59,7 @@ echo ""
 
 # ── 3. Bundled binaries ────────────────────────────────────────────────
 echo "[3] Bundled binaries on PATH"
-for bin in node slidev vhs ffmpeg ffprobe piper; do
+for bin in node slidev vhs ttyd ffmpeg ffprobe piper; do
   if command -v "$bin" &>/dev/null; then
     pass "$bin is on PATH ($(which "$bin"))"
   else
