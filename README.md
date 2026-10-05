@@ -202,8 +202,20 @@ written under `audio-cache/` with autoplaying `<audio>` elements.
 
 ## Development (without snap)
 
+Install the development prerequisites first:
+
+1. [Install VHS](https://github.com/charmbracelet/vhs#installation) and make sure
+   the `vhs` binary is available on your `PATH`.
+2. [Install pnpm](https://pnpm.io/installation).
+3. Install the project dependencies from the repository root:
+
+   ```bash
+   pnpm install
+   ```
+
+You can then run the development commands:
+
 ```bash
-pnpm install
 pnpm run dev              # Slidev dev server
 pnpm run record-video     # Record browser video
 pnpm run terminal:render  # Render terminal tapes
