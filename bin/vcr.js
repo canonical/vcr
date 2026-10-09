@@ -47,6 +47,12 @@ const COMMANDS = {
     usage: "<module> [--locale en] [--format gif|mp4] [--dry-run]",
     moduleAware: true,
   },
+  "interactive-terminal": {
+    script: "serve-interactive-terminals.js",
+    desc: "Serve LXD-backed interactive terminals embedded in slides",
+    usage: "<module> [--locale en] [--dry-run] [--keep-containers]",
+    moduleAware: true,
+  },
   "render-playwright": {
     script: "render-playwright-videos.js",
     desc: "Pre-render browser recordings (Playwright → WebM)",
@@ -165,8 +171,8 @@ function showHelp() {
     Render: [],
     Build: [],
     Record: [],
-    Operations: ["dev", "validate"],
-    Meta: ["help", "version"],
+    Operations: [],
+    Meta: [],
   };
 
   const groupMap = {
@@ -282,10 +288,11 @@ async function main() {
 
     if (cmd.script) {
       // Forward to script with resolved paths
+      const defaultCacheDir = cmd.script === "render-terminal-tapes.js" ? "terminal-cache" : "audio-cache";
       const scriptArgs = [
         ...parsed.rest,
         "--file", mod.index,
-        "--cache-dir", path.join(mod.modDir, "audio-cache"),
+        "--cache-dir", path.join(mod.modDir, defaultCacheDir),
       ];
       return runScript(path.join(SCRIPTS, cmd.script), scriptArgs, { cwd: mod.repo });
     }

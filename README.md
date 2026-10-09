@@ -6,6 +6,7 @@ no re-recording needed.
 
 Built on [Slidev](https://sli.dev) and bundled as a single snap with:
 - **[VHS](https://github.com/charmbracelet/vhs)** — terminal GIF recordings
+- **[ttyd](https://github.com/tsl0922/ttyd)** — browser-based interactive terminals
 - **[Playwright](https://playwright.dev/)** — browser session recordings
 - **[FFmpeg](https://ffmpeg.org/)** — video conversion
 - **[Piper](https://github.com/rhasspy/piper)** — local text-to-speech
@@ -46,6 +47,7 @@ All commands are **module-aware**: they auto-detect a content repo (has `modules
 | `vcr render-audio <module>` | Pre-render speech audio (Piper TTS → WAV) |
 | `vcr render-terminal <module>` | Pre-render terminal recordings (VHS tape → GIF) |
 | `vcr render-playwright <module>` | Pre-render browser recordings (Playwright → WebM) |
+| `vcr interactive-terminal <module>` | Serve live LXD terminals embedded with ttyd |
 
 ### Build (produce artifacts)
 
@@ -122,6 +124,7 @@ Classic confinement — VCR needs full filesystem access for development workflo
 | Slidev | npm (`@slidev/cli`) | latest |
 | FFmpeg | `ffmpeg/latest/stable` snap | latest |
 | VHS | Go build from source | v0.9.0 |
+| ttyd | Ubuntu package | distribution version |
 | Piper TTS | `piper-tts/edge` snap | edge |
 | Playwright + Chromium | npm + browser install | 1.61.0 |
 
@@ -145,6 +148,33 @@ Then run `vcr render-terminal <module>`. The renderer executes each tape block w
 `vhs`, writes the generated GIF under `terminal-cache/`, and replaces the source
 fence with a cached block that Slidev renders directly. Re-running regenerates
 only changed tapes.
+
+### Interactive terminals in slides
+
+An `interactive-terminal` fence creates a live terminal slide backed by an LXD
+system container and displayed by [ttyd](https://github.com/tsl0922/ttyd):
+
+````md
+```interactive-terminal name=ubuntu-lab image=ubuntu:24.04 port=7681
+# Optional setup run inside the container before the terminal opens.
+apt-get update && apt-get install -y curl
+```
+````
+
+Start the terminal service in one shell, then start Slidev in another:
+
+```bash
+vcr interactive-terminal ubuntu
+vcr dev ubuntu
+```
+
+The command replaces the fence with a ttyd iframe while retaining the original
+source for repeatable runs. It creates missing containers, binds ttyd to
+`127.0.0.1` by default, and deletes containers it created when stopped. Use
+`--keep-containers` to preserve them. The host must have an initialized LXD
+installation and the current user must be allowed to use it. Interactive
+terminals are intended for local/live presentations; pre-render terminal tapes
+for static or recorded output.
 
 ### Playwright browser recordings
 
