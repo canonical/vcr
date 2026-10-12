@@ -37,6 +37,15 @@ jobs:
           sudo snap install "./$SNAP_FILE" --dangerous --classic
           ./snap/test-smoke.sh
 
+      - name: Upload VCR logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcr-logs
+          path: /tmp/vcr-*.log
+          retention-days: 30
+          if-no-files-found: warn
+
       - name: Summary
         run: |
           SNAP_FILE=$(ls video-course-recorder_*.snap | head -1)
