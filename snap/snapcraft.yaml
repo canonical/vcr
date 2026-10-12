@@ -147,6 +147,16 @@ parts:
       mkdir -p "${CRAFT_PART_INSTALL}/lib/node_modules"
       cp -r "${CRAFT_PART_BUILD}/node_modules/playwright" \
         "${CRAFT_PART_INSTALL}/lib/node_modules/"
+
+      CHROME_BIN=$(ls "${BROWSERS_DIR}"/chromium-*/chrome-linux64/chrome 2>/dev/null | head -1)
+      if [ -z "${CHROME_BIN}" ]; then
+        echo "ERROR: bundled chromium not found under ${BROWSERS_DIR}" >&2
+        exit 1
+      fi
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/bin"
+      REL=$(realpath --relative-to="${CRAFT_PART_INSTALL}/usr/bin" "${CHROME_BIN}")
+      ln -sf "${REL}" "${CRAFT_PART_INSTALL}/usr/bin/chromium"
     prime:
       - playwright-browsers/
       - lib/node_modules/playwright/
+      - usr/bin/chromium
