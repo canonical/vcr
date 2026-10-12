@@ -45,6 +45,8 @@ parts:
     stage-packages:
       - ffmpeg
       - libzstd1
+      - libblas3
+      - liblapack3
     override-build: |
       craftctl default
       # Remove any stale libzstd bundled by the piper-tts stage-snap so
