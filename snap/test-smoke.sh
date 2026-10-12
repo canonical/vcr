@@ -28,7 +28,9 @@ echo ""
 
 # ── 1b. Create vcr alias (store auto-alias is absent on --dangerous installs) ─
 echo "[1b] vcr alias"
-sudo snap alias video-course-recorder vcr
+if ! command -v vcr &>/dev/null; then
+  sudo snap alias video-course-recorder vcr
+fi
 if command -v vcr &>/dev/null; then
   pass "created alias: video-course-recorder → vcr ($(which vcr))"
 else
@@ -57,40 +59,57 @@ else
 fi
 echo ""
 
-# ── 3. Bundled binaries ────────────────────────────────────────────────
-echo "[3] Bundled binaries on PATH"
+# ── 3. Bundled binaries (internal — must exist in snap, NOT on public PATH) ──
+echo "[3] Bundled binaries (internal to snap)"
+# 'current' is a relative symlink (-> xN); resolve it so find can traverse.
+SNAP_ROOT="$(readlink -f /snap/video-course-recorder/current)"
 for bin in node slidev vhs ffmpeg ffprobe piper; do
-  if command -v "$bin" &>/dev/null; then
-    pass "$bin is on PATH ($(which "$bin"))"
+  found=$(find "$SNAP_ROOT/" \( -name "$bin" -type f -o -name "$bin" -type l \) 2>/dev/null | head -1)
+  if [ -n "$found" ]; then
+    pass "$bin bundled in snap ($found)"
   else
-    # piper might be in /snap/video-course-recorder/current/usr/bin via stage-snap
-    found=$(find /snap/video-course-recorder/current -name "$bin" -type f -o -name "$bin" -type l 2>/dev/null | head -1)
-    if [ -n "$found" ]; then
-      pass "$bin exists in snap ($found)"
-    else
-      fail "$bin not found" "should be bundled in snap"
-    fi
+    fail "$bin not found" "should be bundled inside the snap"
   fi
 done
 echo ""
 
-# ── 4. Node.js version ─────────────────────────────────────────────────
-echo "[4] Node.js version"
-NODE_VER=$(node --version 2>/dev/null || echo "unknown")
-if [[ "$NODE_VER" == v22* ]]; then
-  pass "Node.js $NODE_VER (expected v22.x)"
+# ── 3b. Snap command surface — snap must expose ONLY vcr/video-course-recorder
+# A classic snap does not hide host binaries, so `command -v node` would just
+# find the host's node. What we actually care about is that this snap only
+# publishes the `vcr` command into /snap/bin (its bundled tools stay internal).
+echo "[3b] Snap command surface (/snap/bin)"
+EXPOSED=$(ls /snap/bin 2>/dev/null | grep -E '^(vcr|video-course-recorder)$' | sort | tr '\n' ' ')
+LEAKED=""
+for bin in node slidev vhs ffmpeg ffprobe piper; do
+  [ -e "/snap/bin/$bin" ] && LEAKED="$LEAKED $bin"
+  [ -e "/snap/bin/video-course-recorder.$bin" ] && LEAKED="$LEAKED video-course-recorder.$bin"
+done
+if [ -e /snap/bin/vcr ] && [ -z "$LEAKED" ]; then
+  pass "snap exposes only vcr/video-course-recorder (${EXPOSED})"
 else
-  info "Node.js $NODE_VER"
+  fail "snap command surface unexpected (leaked:${LEAKED:- none}, exposed: ${EXPOSED})" "only vcr should be in /snap/bin"
 fi
 echo ""
 
-# ── 5. slidev binary ───────────────────────────────────────────────────
-echo "[5] slidev"
-SLIDEV_PATH=$(which slidev 2>/dev/null || echo "")
-if [ -n "$SLIDEV_PATH" ]; then
-  pass "slidev found at $SLIDEV_PATH"
+# ── 4. Node.js version ─────────────────────────────────────────────────
+echo "[4] Node.js version (bundled in snap)"
+# Run the snap's OWN node, not whatever is on the host PATH.
+SNAP_NODE="${SNAP_ROOT}/bin/node"
+NODE_VER=$("$SNAP_NODE" --version 2>/dev/null || echo "unknown")
+if [[ "$NODE_VER" == v24* ]]; then
+  pass "Bundled Node.js $NODE_VER (expected v24.x)"
 else
-  fail "slidev not on PATH" "check snap/bin/slidev"
+  fail "Bundled Node.js $NODE_VER (expected v24.x)" "check npm-node-version in snapcraft.yaml"
+fi
+echo ""
+
+# ── 5. slidev wrapper (internal) ───────────────────────────────────────
+echo "[5] slidev wrapper"
+SLIDEV_BIN="/snap/video-course-recorder/current/bin/slidev"
+if [ -f "$SLIDEV_BIN" ] || [ -L "$SLIDEV_BIN" ]; then
+  pass "slidev wrapper present in snap ($SLIDEV_BIN)"
+else
+  fail "slidev wrapper missing" "check snap/bin/slidev"
 fi
 
 # Check that the wrapper + real symlink exist
@@ -135,26 +154,90 @@ else
 fi
 echo ""
 
-# ── 8. Module resolution (dry run if content repo exists) ──────────────
-echo "[8] Module resolution"
+# ── 8. Real content: clone repo, build slides, render terminal GIF ─────
+echo "[8] Real content workflow (partner-enablement)"
 CONTENT_REPO="${HOME}/workspace/partner-enablement"
-if [ -d "$CONTENT_REPO/modules" ] && [ -f "$CONTENT_REPO/package.json" ]; then
-  cd "$CONTENT_REPO"
-  MODULE=$(ls modules/ 2>/dev/null | head -1)
-  if [ -n "$MODULE" ]; then
-    LOCALE=$(ls "modules/$MODULE/" 2>/dev/null | head -1)
-    if [ -f "modules/$MODULE/$LOCALE/index.md" ]; then
-      pass "Content repo detected: modules/$MODULE/$LOCALE/index.md"
-      info "Ready for: vcr dev $MODULE --locale $LOCALE"
-    else
-      info "Module '$MODULE' found but no index.md in locale subdir"
-    fi
+REPO_URL="https://github.com/canonical/partner-enablement.git"
+
+# 8.0 Ensure the content repo is present and up to date (never clobber local work)
+if [ ! -d "$CONTENT_REPO/.git" ]; then
+  info "Cloning $REPO_URL -> $CONTENT_REPO"
+  if git clone --depth 1 "$REPO_URL" "$CONTENT_REPO" >/tmp/vcr-clone.log 2>&1; then
+    pass "Cloned partner-enablement"
   else
-    info "Content repo exists at $CONTENT_REPO but no modules yet"
+    fail "git clone failed" "see /tmp/vcr-clone.log"
   fi
 else
-  info "No content repo at $CONTENT_REPO — module commands need a content repo"
-  info "Clone partner-enablement and run 'pnpm install' there to test full workflow"
+  # Only pull when the working tree is clean, to avoid clobbering local changes.
+  if [ -z "$(git -C "$CONTENT_REPO" status --porcelain)" ]; then
+    if git -C "$CONTENT_REPO" pull --ff-only >/tmp/vcr-pull.log 2>&1; then
+      pass "Updated partner-enablement (git pull --ff-only)"
+    else
+      info "git pull --ff-only skipped/failed (see /tmp/vcr-pull.log) — using existing checkout"
+    fi
+  else
+    info "partner-enablement has local changes — not pulling (using current checkout)"
+  fi
+fi
+
+if [ ! -d "$CONTENT_REPO/modules" ]; then
+  fail "Content repo missing modules/" "clone appears incomplete at $CONTENT_REPO"
+else
+  cd "$CONTENT_REPO"
+
+  # 8a. Real slide build — self-contained throwaway module so we never depend
+  #     on content-repo asset symlinks (e.g. public/content) that may dangle.
+  SMOKE_MOD="_smoketest_$$"
+  SMOKE_DIR="modules/${SMOKE_MOD}/en"
+  mkdir -p "$SMOKE_DIR"
+  cat > "${SMOKE_DIR}/index.md" <<'MD'
+---
+theme: default
+---
+
+# Smoke Test
+
+Slide build smoke test.
+
+---
+
+## Second slide
+
+- bullet one
+- bullet two
+MD
+
+  if vcr build-slides "$SMOKE_MOD" --locale en >/tmp/vcr-build-slides.log 2>&1      && [ -s "${SMOKE_DIR}/dist/index.html" ]; then
+    pass "build-slides produced dist/index.html ($(wc -c < "${SMOKE_DIR}/dist/index.html") bytes)"
+  else
+    fail "build-slides did not produce dist/index.html" "see /tmp/vcr-build-slides.log"
+  fi
+
+  # 8b. Real terminal GIF render via VHS (ttyd + ffmpeg, fully in-snap).
+  #     The ```terminal fence body is raw VHS tape syntax.
+  cat > "${SMOKE_DIR}/index.md" <<'MD'
+# Terminal render smoke
+
+```terminal
+Type "echo vcr-smoke-test"
+Enter
+Sleep 1s
+```
+MD
+
+  if vcr render-terminal "$SMOKE_MOD" --locale en >/tmp/vcr-render-terminal.log 2>&1; then
+    GIF=$(find "modules/${SMOKE_MOD}" -name '*.gif' -size +0c 2>/dev/null | head -1)
+    if [ -n "$GIF" ]; then
+      pass "render-terminal produced GIF ($(wc -c < "$GIF") bytes)"
+    else
+      fail "render-terminal produced no non-empty GIF" "see /tmp/vcr-render-terminal.log"
+    fi
+  else
+    fail "render-terminal exited non-zero" "see /tmp/vcr-render-terminal.log"
+  fi
+
+  # Clean up the throwaway module (never leave fixtures in the content repo).
+  rm -rf "modules/${SMOKE_MOD}"
 fi
 echo ""
 

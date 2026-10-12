@@ -58,6 +58,7 @@ const COMMANDS = {
   "build-slides": {
     script: null,
     exec: "slidev",
+    execSub: "build",
     desc: "Build static Slidev SPA for live presenting or web hosting",
     usage: "<module> [--locale en] [--base /subpath]",
     moduleAware: true,
@@ -274,8 +275,10 @@ async function main() {
 
     if (cmd.exec) {
       // Commands that exec a binary (slidev)
-      const execArgs = cmd.exec === "slidev" && command === "dev"
-        ? [mod.index]
+      // dev -> `slidev <index>` (dev server)
+      // build-slides -> `slidev build <index> --out dist`
+      const execArgs = cmd.execSub
+        ? [cmd.execSub, mod.index, "--out", "dist", ...parsed.rest]
         : [mod.index, ...parsed.rest];
       return runCommand(cmd.exec, execArgs, { cwd: mod.modDir });
     }

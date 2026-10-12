@@ -32,18 +32,26 @@ apps:
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
+      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$LD_LIBRARY_PATH
 
 parts:
   vcr-source:
     plugin: npm
     source: .
     npm-include-node: true
-    npm-node-version: '22'
+    npm-node-version: '24'
     stage-snaps:
-      - ffmpeg/latest/stable
       - piper-tts/edge
+    stage-packages:
+      - ffmpeg
+      - libzstd1
     override-build: |
       craftctl default
+      # Remove any stale libzstd bundled by the piper-tts stage-snap so
+      # the archive libzstd1 (1.5.x) staged above is the only one bundled.
+      for d in "${CRAFT_PART_INSTALL}"/usr/lib/*/; do
+        rm -f "${d}"libzstd.so.1.3.* "${d}"libzstd.so.1.4.*
+      done
       # Install slidev globally so 'slidev' is on $SNAP/bin
       npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
@@ -80,6 +88,18 @@ parts:
       cp "${CRAFT_PART_BUILD}/bin/vcr.js" "${CRAFT_PART_INSTALL}/bin/vcr"
       chmod +x "${CRAFT_PART_INSTALL}/bin/vcr"
 
+    override-stage: |
+      craftctl default
+      # Remove any stale libzstd bundled by the piper-tts stage-snap so
+      # the archive libzstd1 (1.5.x) staged above is the only one bundled.
+      for d in "${CRAFT_STAGE}"/usr/lib/*/; do
+        rm -f "${d}"libzstd.so.1.3.* "${d}"libzstd.so.1.4.* 2>/dev/null || true
+        for good in "${d}"libzstd.so.1.5*; do
+          [ -e "${good}" ] || continue
+          ln -sf "$(basename "${good}")" "${d}libzstd.so.1"
+        done
+      done
+
   vhs:
     plugin: go
     source: https://github.com/charmbracelet/vhs
@@ -89,6 +109,8 @@ parts:
       - go/latest/stable
     build-environment:
       - CGO_ENABLED: "0"
+    stage-packages:
+      - ttyd
     organize:
       bin/vhs: bin/vhs
 
