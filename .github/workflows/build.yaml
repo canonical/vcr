@@ -30,6 +30,8 @@ jobs:
           retention-days: 30
 
       - name: Install & smoke test
+        env:
+          CONTENT_REPO_TOKEN: ${{ secrets.CONTENT_REPO_TOKEN }}
         run: |
           SNAP_FILE=$(ls video-course-recorder_*.snap | head -1)
           sudo snap install "./$SNAP_FILE" --dangerous --classic

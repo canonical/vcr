@@ -158,16 +158,40 @@ echo ""
 echo "[8] Real content workflow (partner-enablement)"
 CONTENT_REPO="${HOME}/workspace/partner-enablement"
 REPO_URL="https://github.com/canonical/partner-enablement.git"
+CLONE_OK=0  # becomes 1 only after a successful clone
 
 # 8.0 Ensure the content repo is present and up to date (never clobber local work)
 if [ ! -d "$CONTENT_REPO/.git" ]; then
-  info "Cloning $REPO_URL -> $CONTENT_REPO"
-  if git clone --depth 1 "$REPO_URL" "$CONTENT_REPO" >/tmp/vcr-clone.log 2>&1; then
-    pass "Cloned partner-enablement"
+  if [ -n "${CONTENT_REPO_TOKEN:-}" ]; then
+    CLONE_URL="https://x-access-token:${CONTENT_REPO_TOKEN}@github.com/canonical/partner-enablement.git"
+    info "Cloning partner-enablement (authenticated) -> $CONTENT_REPO"
   else
-    fail "git clone failed" "see /tmp/vcr-clone.log"
+    CLONE_URL="$REPO_URL"
+    info "Cloning partner-enablement (anonymous) -> $CONTENT_REPO"
+  fi
+  mkdir -p "$(dirname "$CONTENT_REPO")"
+  git clone --depth 1 "$CLONE_URL" "$CONTENT_REPO" >/tmp/vcr-clone.log 2>&1 && CLONE_RC=0 || CLONE_RC=$?
+  # Never let the token leak into logs/artifacts.
+  if [ -n "${CONTENT_REPO_TOKEN:-}" ]; then
+    sed -i "s|${CONTENT_REPO_TOKEN}|***TOKEN***|g" /tmp/vcr-clone.log 2>/dev/null || true
+  fi
+  if [ "$CLONE_RC" -eq 0 ]; then
+    pass "Cloned partner-enablement"
+    CLONE_OK=1
+    # Scrub any tokenized remote so the secret never persists on disk.
+    git -C "$CONTENT_REPO" remote set-url origin "$REPO_URL" 2>/dev/null || true
+  else
+    if [ -n "${CONTENT_REPO_TOKEN:-}" ]; then
+      fail "Authenticated clone of partner-enablement FAILED" \
+           "CONTENT_REPO_TOKEN is set but clone failed — token likely expired, unapproved, or lacks Contents:read on canonical/partner-enablement (see /tmp/vcr-clone.log)"
+    else
+      fail "CONTENT_REPO_TOKEN is not set" \
+           "partner-enablement is private — set the CONTENT_REPO_TOKEN secret (fine-grained token with Contents:read) so the smoke test can clone it"
+    fi
+    CLONE_OK=0
   fi
 else
+  CLONE_OK=1
   # Only pull when the working tree is clean, to avoid clobbering local changes.
   if [ -z "$(git -C "$CONTENT_REPO" status --porcelain)" ]; then
     if git -C "$CONTENT_REPO" pull --ff-only >/tmp/vcr-pull.log 2>&1; then
@@ -180,7 +204,9 @@ else
   fi
 fi
 
-if [ ! -d "$CONTENT_REPO/modules" ]; then
+if [ "$CLONE_OK" -ne 1 ]; then
+  : # clone failed/absent — already reported as a failure above
+elif [ ! -d "$CONTENT_REPO/modules" ]; then
   fail "Content repo missing modules/" "clone appears incomplete at $CONTENT_REPO"
 else
   cd "$CONTENT_REPO"
