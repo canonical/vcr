@@ -13,18 +13,6 @@ on:
           - beta
           - candidate
           - stable
-      grade:
-        description: 'Snap grade'
-        required: true
-        type: choice
-        default: 'devel'
-        options:
-          - devel
-          - stable
-      create_tag:
-        description: 'Create and push a git tag (v<version>)'
-        type: boolean
-        default: true
 
 jobs:
   release:
@@ -35,25 +23,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read snap version
+      - name: Derive version from git tag
         id: version
         run: |
-          VER=$(grep '^version:' snap/snapcraft.yaml | awk '{print $2}' | tr -d "'\"")
+          # Base version = latest git tag (v<semver>), stripped of leading v
+          BASE=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+          if [ -z "$BASE" ]; then
+            echo "No git tag found; run the Version Bump workflow first" >&2
+            exit 1
+          fi
+          SHA=$(git rev-parse --short HEAD)
+          # commits since the base tag
+          SINCE=$(git rev-list "v${BASE}..HEAD" --count 2>/dev/null || echo 0)
+          RUN="${GITHUB_RUN_NUMBER}"
+          case "${{ inputs.channel }}" in
+            stable)    VER="${BASE}" ;;
+            candidate) VER="${BASE}-rc.${RUN}" ;;
+            beta)      VER="${BASE}-beta.${RUN}" ;;
+            edge)      VER="${BASE}-edge.${SINCE}+${SHA}" ;;
+            *)         VER="${BASE}" ;;
+          esac
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
           echo "version=${VER}" >> "$GITHUB_OUTPUT"
-          echo "Snap version: ${VER}"
+          echo "Base: ${BASE} | Channel: ${{ inputs.channel }} | Version: ${VER}"
 
       - name: Setup LXD
         uses: canonical/setup-lxd@v1
         with:
           channel: 5.21/stable
 
+      - name: Derive grade from channel
+        id: grade
+        run: |
+          # stable/candidate channels require grade: stable; edge/beta use devel
+          case "${{ inputs.channel }}" in
+            stable|candidate) GRADE=stable ;;
+            *) GRADE=devel ;;
+          esac
+          echo "grade=${GRADE}" >> "$GITHUB_OUTPUT"
+          echo "Derived grade: ${GRADE}"
+
       - name: Build snap
         env:
-          GRADE: ${{ inputs.grade }}
+          GRADE: ${{ steps.grade.outputs.grade }}
         run: |
           sudo snap install snapcraft --classic --channel=latest/stable
-          # Set grade for this build only
+          # Set grade + derived version for this build only
           sed -i "s/^grade:.*/grade: ${GRADE}/" snap/snapcraft.yaml
+          sed -i "s/^version:.*/version: '${{ steps.version.outputs.version }}'/" snap/snapcraft.yaml
           snapcraft pack --use-lxd
 
       - name: Upload to Snap Store
@@ -64,21 +81,14 @@ jobs:
           SNAP_FILE=$(ls video-course-recorder_*.snap | head -1)
           snapcraft upload "$SNAP_FILE" --release=${{ inputs.channel }}
 
-      - name: Create git tag
-        if: ${{ inputs.create_tag }}
-        run: |
-          TAG="v${{ steps.version.outputs.version }}"
-          git tag -a "${TAG}" -m "Release ${TAG} to ${{ inputs.channel }}"
-          git push origin "${TAG}"
-
       - name: Create GitHub Release
+        if: ${{ inputs.channel == 'stable' }}
         uses: softprops/action-gh-release@v2
         with:
-          name: "v${{ steps.version.outputs.version }}"
-          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "v${{ steps.version.outputs.base }}"
+          tag_name: "v${{ steps.version.outputs.base }}"
           files: video-course-recorder_*.snap
           generate_release_notes: true
-          draft: ${{ inputs.channel != 'stable' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -87,4 +97,4 @@ jobs:
           echo "### Released :rocket:" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Channel:** ${{ inputs.channel }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Grade:** ${{ inputs.grade }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Grade:** ${{ steps.grade.outputs.grade }}" >> "$GITHUB_STEP_SUMMARY"
