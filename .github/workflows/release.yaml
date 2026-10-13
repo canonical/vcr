@@ -77,7 +77,6 @@ jobs:
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
-          echo "${SNAPCRAFT_STORE_CREDENTIALS}" | snapcraft login --with -
           SNAP_FILE=$(ls video-course-recorder_*.snap | head -1)
           snapcraft upload "$SNAP_FILE" --release=${{ inputs.channel }}
 
