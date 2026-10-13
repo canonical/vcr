@@ -79,14 +79,15 @@ parts:
       npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-seriph --prefix "${CRAFT_PART_INSTALL}"
-      # Vite creates its dep cache in node_modules/.vite relative to the
-      # first node_modules it finds walking up from the slidev binary. In
-      # a snap that means the read-only squashfs, which fails. Create a
-      # symlink so the kernel redirects writes to a writable location, and
-      # a wrapper that ensures the target exists at runtime.
-      SLIDEV_NM="${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/node_modules"
-      mkdir -p "${SLIDEV_NM}"
-      ln -sf /tmp/vcr-vite-cache "${SLIDEV_NM}/.vite"
+      # Vite writes its dep cache to node_modules/.vite. When Slidev is
+      # installed globally (as in this snap), it hardcodes cacheDir to
+      # <cliRoot>/node_modules/.vite — read-only squashfs at runtime. Patch
+      # that to a writable /tmp dir instead of shipping an external symlink
+      # (which the Snap Store rejects as lint-snap-v2_external_symlinks).
+      find "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" -name '*.mjs' -print0 \
+        | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|"/tmp/vcr-vite-cache"|g'
+      grep -Rq 'vcr-vite-cache' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
+        || { echo "ERROR: failed to patch Slidev cacheDir" >&2; exit 1; }
       # Wrap slidev to ensure /tmp/vcr-vite-cache exists at runtime
       mv "${CRAFT_PART_INSTALL}/bin/slidev" "${CRAFT_PART_INSTALL}/bin/slidev.real"
       cat > "${CRAFT_PART_INSTALL}/bin/slidev" << 'WRAPPER'

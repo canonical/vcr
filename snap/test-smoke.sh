@@ -121,18 +121,19 @@ else
 fi
 echo ""
 
-# ── 6. Vite cache symlink ──────────────────────────────────────────────
+# ── 6. Vite cache redirect (patched cacheDir, no external symlink) ────
 echo "[6] Vite cache redirect"
+SLIDEV_DIST="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/dist"
+if grep -Rq 'vcr-vite-cache' "$SLIDEV_DIST"; then
+  pass "Slidev cacheDir patched to writable location"
+else
+  fail "Slidev cacheDir patch missing" "expected vcr-vite-cache in $SLIDEV_DIST"
+fi
 VITE_SYMLINK="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/node_modules/.vite"
 if [ -L "$VITE_SYMLINK" ]; then
-  TARGET=$(readlink "$VITE_SYMLINK" 2>/dev/null || echo "unknown")
-  if [[ "$TARGET" == /tmp/* ]]; then
-    pass ".vite → $TARGET (writable tmp)"
-  else
-    info ".vite → $TARGET (unexpected target)"
-  fi
+  fail ".vite external symlink present" "remove symlink; use the cacheDir patch instead"
 else
-  fail ".vite symlink missing" "Vite will try to write to read-only squashfs"
+  pass "no external .vite symlink shipped"
 fi
 echo ""
 
