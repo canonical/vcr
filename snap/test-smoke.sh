@@ -385,6 +385,57 @@ pkill -f '[s]lidev' 2>/dev/null || true
 rm -rf "$SMOKE_PROJ"
 echo ""
 
+# ── 12. Offline deck recording + MP4 mux (record-video) ────────────────
+echo "[12] MP4 conversion (record-video, offline)"
+SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
+mkdir -p "$SMOKE_PROJ/modules/recvidsmoke/en"
+cat > "$SMOKE_PROJ/package.json" <<'JSON'
+{"name":"vcr-smoke","private":true}
+JSON
+cat > "$SMOKE_PROJ/modules/recvidsmoke/en/index.md" <<'MD'
+---
+theme: default
+---
+
+# Record video smoke
+
+Slide one.
+
+---
+
+## Slide two
+
+- bullet a
+- bullet b
+MD
+( cd "$SMOKE_PROJ" && nohup vcr dev recvidsmoke --locale en >/tmp/vcr-dev-vid-smoke.log 2>&1 ) &
+DEV_READY=0
+for _ in $(seq 1 60); do
+  if ss -ltn 2>/dev/null | grep -q ':3030'; then DEV_READY=1; break; fi
+  sleep 1
+done
+if [ "$DEV_READY" -eq 1 ]; then
+  if (cd "$SMOKE_PROJ" && vcr record-video recvidsmoke --locale en >/tmp/vcr-record-vid-smoke.log 2>&1); then
+    MP4="$(find "$SMOKE_PROJ" -name '*.mp4' -size +0c 2>/dev/null | head -1)"
+    if [ -n "$MP4" ]; then
+      pass "record-video produced MP4 ($(wc -c < "$MP4") bytes)"
+    else
+      echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+      fail "record-video produced no MP4" "see /tmp/vcr-record-vid-smoke.log"
+    fi
+  else
+    echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+    fail "record-video exited non-zero" "see /tmp/vcr-record-vid-smoke.log"
+  fi
+else
+  echo "----- /tmp/vcr-dev-vid-smoke.log (tail) -----"; tail -20 /tmp/vcr-dev-vid-smoke.log; echo "-----"
+  fail "slidev dev server never came up on :3030" "see /tmp/vcr-dev-vid-smoke.log"
+fi
+pkill -f '[v]cr dev recvidsmoke' 2>/dev/null || true
+pkill -f '[s]lidev' 2>/dev/null || true
+rm -rf "$SMOKE_PROJ"
+echo ""
+
 # ── Summary ────────────────────────────────────────────────────────────
 echo "=== Results: ${PASS} passed, ${FAIL} failed ==="
 if [ "$FAIL" -gt 0 ]; then
