@@ -256,9 +256,11 @@ MD
     if [ -n "$GIF" ]; then
       pass "render-terminal produced GIF ($(wc -c < "$GIF") bytes)"
     else
+      echo "----- vcr-render-terminal.log (tail) -----"; tail -40 /tmp/vcr-render-terminal.log; echo "------------------------------------------"
       fail "render-terminal produced no non-empty GIF" "see /tmp/vcr-render-terminal.log"
     fi
   else
+    echo "----- vcr-render-terminal.log (tail) -----"; tail -40 /tmp/vcr-render-terminal.log; echo "------------------------------------------"
     fail "render-terminal exited non-zero" "see /tmp/vcr-render-terminal.log"
   fi
 
