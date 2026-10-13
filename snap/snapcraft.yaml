@@ -43,6 +43,10 @@ apps:
       ESPEAK_DATA_PATH: $SNAP/usr/share/espeak-ng-data
       # Per-user writable vite dep cache (shared /tmp would collide across users)
       VCR_VITE_CACHE: $SNAP_USER_COMMON/vite-cache
+      # Chromium crashpad needs a writable config/cache dir (GH runner bug:
+      # "chrome_crashpad_handler: --database is required").
+      XDG_CONFIG_HOME: $SNAP_USER_COMMON/config
+      XDG_CACHE_HOME: $SNAP_USER_COMMON/cache
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
       # Add both Ubuntu path and Debian alternative path for libraries.
       # Needed for ffmpeg to find the correct codec library
