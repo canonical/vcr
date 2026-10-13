@@ -17,7 +17,7 @@ description: |
   - Static site generation for live presenting (build-slides)
 
 grade: stable
-confinement: classic
+confinement: strict
 license: Apache-2.0
 contact: https://github.com/canonical/vcr/issues
 issues: https://github.com/canonical/vcr/issues
@@ -29,8 +29,15 @@ apps:
     command: bin/vcr
     aliases:
       - vcr
+    plugs:
+      - home
+      - network
+      - network-bind
+      - browser-support
+      - opengl
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
+      FONTCONFIG_PATH: $SNAP/etc/fonts
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
       # Add both Ubuntu path and Debian alternative path for libraries.
       # Needed for ffmpeg to find the correct codec library
@@ -111,6 +118,19 @@ parts:
       mkdir -p "${CRAFT_PART_INSTALL}/bin"
       cp "${CRAFT_PART_BUILD}/bin/vcr.js" "${CRAFT_PART_INSTALL}/bin/vcr"
       chmod +x "${CRAFT_PART_INSTALL}/bin/vcr"
+      # Register the staged fonts with fontconfig. Under confinement the
+      # default /usr/share/fonts resolves to the core24 base (which only ships
+      # Plymouth.ttf); the DejaVu fonts are staged under $SNAP/usr/share/fonts.
+      # /snap/video-course-recorder/current is a stable symlink to the active rev.
+      mkdir -p "${CRAFT_PART_INSTALL}/etc/fonts/conf.d"
+      cat > "${CRAFT_PART_INSTALL}/etc/fonts/conf.d/00-snap-fonts.conf" <<'FONTSCONF'
+      <?xml version="1.0"?>
+      <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+      <fontconfig>
+        <dir>/snap/video-course-recorder/current/usr/share/fonts</dir>
+        <cachedir>/tmp/vcr-fontconfig</cachedir>
+      </fontconfig>
+      FONTSCONF
 
     override-stage: |
       craftctl default
@@ -191,7 +211,7 @@ parts:
       # unconditionally so terminal recording works for both root and users.
       printf '%s\n' \
         '#!/bin/sh' \
-        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox "$@"' \
+        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox --disable-dev-shm-usage --disable-gpu "$@"' \
         > "${CRAFT_PART_INSTALL}/usr/bin/chromium"
       chmod +x "${CRAFT_PART_INSTALL}/usr/bin/chromium"
     prime:

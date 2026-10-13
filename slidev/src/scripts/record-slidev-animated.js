@@ -73,7 +73,10 @@ const beforeRecording = new Set(await fs.readdir(OUT_DIR));
 const outputPath = path.join(OUT_DIR, OUTPUT_NAME);
 await fs.rm(outputPath, { force: true });
 
-const browser = await chromium.launch({ headless: true });
+const SNAP_CHROMIUM_ARGS = process.env.SNAP
+  ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+  : [];
+const browser = await chromium.launch({ headless: true, args: SNAP_CHROMIUM_ARGS });
 
 const context = await browser.newContext({
   viewport: VIEWPORT,
