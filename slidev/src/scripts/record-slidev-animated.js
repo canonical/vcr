@@ -74,7 +74,7 @@ const outputPath = path.join(OUT_DIR, OUTPUT_NAME);
 await fs.rm(outputPath, { force: true });
 
 const SNAP_CHROMIUM_ARGS = process.env.SNAP
-  ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+  ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-crash-reporter"]
   : [];
 const browser = await chromium.launch({ headless: true, args: SNAP_CHROMIUM_ARGS });
 

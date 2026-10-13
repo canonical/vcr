@@ -224,7 +224,7 @@ parts:
       # unconditionally so terminal recording works for both root and users.
       printf '%s\n' \
         '#!/bin/sh' \
-        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox --disable-dev-shm-usage --disable-gpu "$@"' \
+        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-crash-reporter "$@"' \
         > "${CRAFT_PART_INSTALL}/usr/bin/chromium"
       chmod +x "${CRAFT_PART_INSTALL}/usr/bin/chromium"
     prime:
