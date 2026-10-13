@@ -41,6 +41,8 @@ apps:
       # espeak-ng (piper TTS) looks for phoneme tables at a compiled-in
       # /usr/share/espeak-ng-data which the core24 base does not ship.
       ESPEAK_DATA_PATH: $SNAP/usr/share/espeak-ng-data
+      # Per-user writable vite dep cache (shared /tmp would collide across users)
+      VCR_VITE_CACHE: $SNAP_USER_COMMON/vite-cache
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
       # Add both Ubuntu path and Debian alternative path for libraries.
       # Needed for ffmpeg to find the correct codec library
@@ -97,17 +99,17 @@ parts:
       # Vite writes its dep cache to node_modules/.vite. When Slidev is
       # installed globally (as in this snap), it hardcodes cacheDir to
       # <cliRoot>/node_modules/.vite — read-only squashfs at runtime. Patch
-      # that to a writable /tmp dir instead of shipping an external symlink
+      # that to a writable per-user dir instead of shipping an external symlink
       # (which the Snap Store rejects as lint-snap-v2_external_symlinks).
       find "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" -name '*.mjs' -print0 \
-        | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|"/tmp/vcr-vite-cache"|g'
-      grep -Rq 'vcr-vite-cache' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
+        | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|process.env.VCR_VITE_CACHE|g'
+      grep -Rq 'VCR_VITE_CACHE' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
         || { echo "ERROR: failed to patch Slidev cacheDir" >&2; exit 1; }
-      # Wrap slidev to ensure /tmp/vcr-vite-cache exists at runtime
+      # Wrap slidev to ensure the per-user VCR_VITE_CACHE dir exists at runtime
       mv "${CRAFT_PART_INSTALL}/bin/slidev" "${CRAFT_PART_INSTALL}/bin/slidev.real"
       cat > "${CRAFT_PART_INSTALL}/bin/slidev" << 'WRAPPER'
       #!/bin/sh
-      mkdir -p /tmp/vcr-vite-cache
+      mkdir -p "${VCR_VITE_CACHE:-$SNAP_USER_COMMON/vite-cache}"
       exec "${SNAP}/bin/slidev.real" "$@"
       WRAPPER
       chmod +x "${CRAFT_PART_INSTALL}/bin/slidev"

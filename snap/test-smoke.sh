@@ -124,10 +124,10 @@ echo ""
 # ── 6. Vite cache redirect (patched cacheDir, no external symlink) ────
 echo "[6] Vite cache redirect"
 SLIDEV_DIST="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/dist"
-if grep -Rq 'vcr-vite-cache' "$SLIDEV_DIST"; then
+if grep -Rq 'VCR_VITE_CACHE' "$SLIDEV_DIST"; then
   pass "Slidev cacheDir patched to writable location"
 else
-  fail "Slidev cacheDir patch missing" "expected vcr-vite-cache in $SLIDEV_DIST"
+  fail "Slidev cacheDir patch missing" "expected VCR_VITE_CACHE in $SLIDEV_DIST"
 fi
 VITE_SYMLINK="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/node_modules/.vite"
 if [ -L "$VITE_SYMLINK" ]; then
