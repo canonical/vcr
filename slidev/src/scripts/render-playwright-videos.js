@@ -108,7 +108,10 @@ async function renderWithPlaywright(script, assetPath, options) {
 
   const width = parseIntegerOption(options.width, 1280, "width");
   const height = parseIntegerOption(options.height, 720, "height");
-  const browser = await chromium.launch({ headless: true });
+  const SNAP_CHROMIUM_ARGS = process.env.SNAP
+    ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-crash-reporter"]
+    : [];
+  const browser = await chromium.launch({ headless: true, args: SNAP_CHROMIUM_ARGS });
   const context = await browser.newContext({
     viewport: { width, height },
     recordVideo: { dir: tmpDir, size: { width, height } },

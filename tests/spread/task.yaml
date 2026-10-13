@@ -1,4 +1,4 @@
-summary: Verify that the VCR snap builds and contains expected binaries
+summary: Verify that the VCR snap builds and is reachable under strict confinement
 
 execute: |
   echo "=== Building VCR snap ==="
@@ -32,7 +32,77 @@ execute: |
   check "bin/piper"           "Piper TTS"
   check "bin/node"            "Node.js runtime"
   check "playwright-browsers" "Playwright + Chromium browsers"
-  check "\.vite"              "Vite cache symlink → /tmp"
+  # Vite cache redirect: Slidev's cacheDir is patched to use VCR_VITE_CACHE
+  # (per-user env var) instead of a read-only squashfs path or an external symlink.
+  SLIDEV_MJS=$(unsquashfs -l "$SNAP_FILE" 2>/dev/null | grep -oE 'lib/node_modules/@slidev/cli/dist/serve-[^/]+\.mjs' | head -1)
+  if [ -n "$SLIDEV_MJS" ] && unsquashfs -cat "$SNAP_FILE" "$SLIDEV_MJS" 2>/dev/null | grep -q 'VCR_VITE_CACHE'; then
+    echo "  PASS: Vite cache redirect (VCR_VITE_CACHE)"
+  else
+    echo "  FAIL: Vite cache redirect (VCR_VITE_CACHE not found in Slidev dist)"
+    exit 1
+  fi
+
 
   echo ""
+  echo "=== Installing snap (strict) ==="
+  snap install --dangerous "$SNAP_FILE"
+  snap alias video-course-recorder vcr 2>/dev/null || true
+
+  echo ""
+  echo "=== CLI reachable under strict confinement ==="
+  if vcr --version 2>/dev/null | grep -q '^vcr '; then
+    echo "  PASS: vcr --version ($(vcr --version 2>/dev/null))"
+  else
+    echo "  FAIL: vcr --version"
+    exit 1
+  fi
+  if vcr --help >/dev/null 2>&1; then
+    echo "  PASS: vcr --help"
+  else
+    echo "  FAIL: vcr --help"
+    exit 1
+  fi
+
+  echo ""
+  echo "=== Auto-connected plugs (no manual snap connect needed) ==="
+  for plug in home network network-bind browser-support opengl; do
+    if snap connections video-course-recorder | grep -q "video-course-recorder:$plug *:$plug"; then
+      echo "  PASS: $plug auto-connected"
+    else
+      echo "  FAIL: $plug not auto-connected"
+      exit 1
+    fi
+  done
+
+  echo ""
+  echo "=== Runtime reachability: build-slides under strict ==="
+  SMOKE_PROJ="$HOME/vcr-spread-smoke"
+  rm -rf "$SMOKE_PROJ"
+  mkdir -p "$SMOKE_PROJ/modules/spreadsmoke/en"
+  cat > "$SMOKE_PROJ/package.json" <<'JSON'
+  {"name":"vcr-spread-smoke","private":true}
+  JSON
+  cat > "$SMOKE_PROJ/modules/spreadsmoke/en/index.md" <<'MD'
+  ---
+  theme: default
+  ---
+
+  # Strict confinement
+
+  build-slides reachability test.
+
+  ---
+
+  ## Slide two
+
+  - a
+  - b
+  MD
+  if (cd "$SMOKE_PROJ" && vcr build-slides spreadsmoke --locale en >/tmp/vcr-build-slides.log 2>&1) && [ -s "$SMOKE_PROJ/modules/spreadsmoke/en/dist/index.html" ]; then
+    echo "  PASS: build-slides under strict ($(wc -c < "$SMOKE_PROJ/modules/spreadsmoke/en/dist/index.html") bytes)"
+  else
+    echo "  FAIL: build-slides under strict — see /tmp/vcr-build-slides.log"
+    exit 1
+  fi
+
   echo "=== All checks passed ==="

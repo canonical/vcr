@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# VCR snap smoke test — run after `snap install video-course-recorder_*.snap --dangerous --classic`
+# VCR snap smoke test — run after `snap install video-course-recorder_*.snap --dangerous`
 set -euo pipefail
 
 RED='\033[0;31m'
@@ -22,7 +22,7 @@ echo "[1] Snap installation"
 if snap list video-course-recorder &>/dev/null; then
   pass "vcr snap is installed ($(snap list video-course-recorder | awk 'NR>1{print $2, $3}'))"
 else
-  fail "vcr snap is not installed" "run: sudo snap install ./video-course-recorder_*.snap --dangerous --classic"
+  fail "vcr snap is not installed" "run: sudo snap install ./video-course-recorder_*.snap --dangerous"
 fi
 echo ""
 
@@ -124,10 +124,10 @@ echo ""
 # ── 6. Vite cache redirect (patched cacheDir, no external symlink) ────
 echo "[6] Vite cache redirect"
 SLIDEV_DIST="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/dist"
-if grep -Rq 'vcr-vite-cache' "$SLIDEV_DIST"; then
+if grep -Rq 'VCR_VITE_CACHE' "$SLIDEV_DIST"; then
   pass "Slidev cacheDir patched to writable location"
 else
-  fail "Slidev cacheDir patch missing" "expected vcr-vite-cache in $SLIDEV_DIST"
+  fail "Slidev cacheDir patch missing" "expected VCR_VITE_CACHE in $SLIDEV_DIST"
 fi
 VITE_SYMLINK="/snap/video-course-recorder/current/lib/node_modules/@slidev/cli/node_modules/.vite"
 if [ -L "$VITE_SYMLINK" ]; then
@@ -268,6 +268,172 @@ MD
   # Clean up the throwaway module (never leave fixtures in the content repo).
   rm -rf "modules/${SMOKE_MOD}"
 fi
+echo ""
+
+# ── 9. Offline browser render (Playwright → WebM via data: URL) ────────
+# Runs offline (no network / no private content repo) so CI covers the
+# browser-render path even when the optional partner-enablement clone is absent.
+echo "[9] Playwright render (offline)"
+SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
+mkdir -p "$SMOKE_PROJ/modules/pwsmoke/en"
+cat > "$SMOKE_PROJ/package.json" <<'JSON'
+{"name":"vcr-smoke","private":true}
+JSON
+cat > "$SMOKE_PROJ/modules/pwsmoke/en/index.md" <<'MD'
+# Playwright render smoke
+
+```playwright name=smoke width=640 height=360
+export default async function ({ page, demo }) {
+  await page.goto("data:text/html,<h1>Smoke</h1><p>hello</p>");
+  await demo.wait(600);
+}
+```
+MD
+if (cd "$SMOKE_PROJ" && vcr render-playwright pwsmoke --locale en >/tmp/vcr-render-pw.log 2>&1); then
+  WEBM="$(find "$SMOKE_PROJ" -name '*.webm' -size +0c 2>/dev/null | head -1)"
+  if [ -n "$WEBM" ]; then
+    pass "render-playwright produced WebM ($(wc -c < "$WEBM") bytes)"
+  else
+    echo "----- /tmp/vcr-render-pw.log (tail) -----"; tail -40 /tmp/vcr-render-pw.log; echo "-----"
+    fail "render-playwright produced no non-empty WebM" "see /tmp/vcr-render-pw.log"
+  fi
+else
+  echo "----- /tmp/vcr-render-pw.log (tail) -----"; tail -40 /tmp/vcr-render-pw.log; echo "-----"
+  fail "render-playwright exited non-zero" "see /tmp/vcr-render-pw.log"
+fi
+rm -rf "$SMOKE_PROJ"
+echo ""
+
+# ── 10. Offline speech render (piper → WAV, bundled voice) ─────────────
+echo "[10] Speech render (piper, offline)"
+SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
+mkdir -p "$SMOKE_PROJ/modules/audsmoke/en"
+cat > "$SMOKE_PROJ/package.json" <<'JSON'
+{"name":"vcr-smoke","private":true}
+JSON
+cat > "$SMOKE_PROJ/modules/audsmoke/en/index.md" <<'MD'
+# Speech render smoke
+
+```tts name=hello
+Hello world, this is a smoke test of the piper text to speech pipeline.
+```
+MD
+PIPER_VOICE="/snap/video-course-recorder/current/voices/en_US-lessac-medium.onnx"
+if (cd "$SMOKE_PROJ" && vcr render-audio audsmoke --locale en --model "$PIPER_VOICE" >/tmp/vcr-render-audio.log 2>&1); then
+  WAV="$(find "$SMOKE_PROJ" -name '*.wav' -size +0c 2>/dev/null | head -1)"
+  if [ -n "$WAV" ]; then
+    pass "render-audio produced WAV ($(wc -c < "$WAV") bytes)"
+  else
+    echo "----- /tmp/vcr-render-audio.log (tail) -----"; tail -40 /tmp/vcr-render-audio.log; echo "-----"
+    fail "render-audio produced no non-empty WAV" "see /tmp/vcr-render-audio.log"
+  fi
+else
+  echo "----- /tmp/vcr-render-audio.log (tail) -----"; tail -40 /tmp/vcr-render-audio.log; echo "-----"
+  fail "render-audio exited non-zero" "see /tmp/vcr-render-audio.log"
+fi
+rm -rf "$SMOKE_PROJ"
+echo ""
+
+# ── 11. Offline deck recording (slidev dev + chromium → WebM) ──────────
+echo "[11] Deck recording (record-animated, offline)"
+SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
+mkdir -p "$SMOKE_PROJ/modules/recsmoke/en"
+cat > "$SMOKE_PROJ/package.json" <<'JSON'
+{"name":"vcr-smoke","private":true}
+JSON
+cat > "$SMOKE_PROJ/modules/recsmoke/en/index.md" <<'MD'
+---
+theme: default
+---
+
+# Record smoke
+
+Slide one.
+
+---
+
+## Slide two
+
+- bullet a
+- bullet b
+MD
+( cd "$SMOKE_PROJ" && nohup vcr dev recsmoke --locale en >/tmp/vcr-dev-smoke.log 2>&1 ) &
+DEV_READY=0
+for _ in $(seq 1 60); do
+  if ss -ltn 2>/dev/null | grep -q ':3030'; then DEV_READY=1; break; fi
+  sleep 1
+done
+if [ "$DEV_READY" -eq 1 ]; then
+  if (cd "$SMOKE_PROJ" && vcr record-animated recsmoke --locale en >/tmp/vcr-record-smoke.log 2>&1); then
+    REC="$(find "$SMOKE_PROJ" -name '*.webm' -size +0c 2>/dev/null | head -1)"
+    if [ -n "$REC" ]; then
+      pass "record-animated produced WebM ($(wc -c < "$REC") bytes)"
+    else
+      echo "----- /tmp/vcr-record-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-smoke.log; echo "-----"
+      fail "record-animated produced no WebM" "see /tmp/vcr-record-smoke.log"
+    fi
+  else
+    echo "----- /tmp/vcr-record-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-smoke.log; echo "-----"
+    fail "record-animated exited non-zero" "see /tmp/vcr-record-smoke.log"
+  fi
+else
+  echo "----- /tmp/vcr-dev-smoke.log (tail) -----"; tail -20 /tmp/vcr-dev-smoke.log; echo "-----"
+  fail "slidev dev server never came up on :3030" "see /tmp/vcr-dev-smoke.log"
+fi
+pkill -f '[v]cr dev recsmoke' 2>/dev/null || true
+pkill -f '[s]lidev' 2>/dev/null || true
+rm -rf "$SMOKE_PROJ"
+echo ""
+
+# ── 12. Offline deck recording + MP4 mux (record-video) ────────────────
+echo "[12] MP4 conversion (record-video, offline)"
+SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
+mkdir -p "$SMOKE_PROJ/modules/recvidsmoke/en"
+cat > "$SMOKE_PROJ/package.json" <<'JSON'
+{"name":"vcr-smoke","private":true}
+JSON
+cat > "$SMOKE_PROJ/modules/recvidsmoke/en/index.md" <<'MD'
+---
+theme: default
+---
+
+# Record video smoke
+
+Slide one.
+
+---
+
+## Slide two
+
+- bullet a
+- bullet b
+MD
+( cd "$SMOKE_PROJ" && nohup vcr dev recvidsmoke --locale en >/tmp/vcr-dev-vid-smoke.log 2>&1 ) &
+DEV_READY=0
+for _ in $(seq 1 60); do
+  if ss -ltn 2>/dev/null | grep -q ':3030'; then DEV_READY=1; break; fi
+  sleep 1
+done
+if [ "$DEV_READY" -eq 1 ]; then
+  if (cd "$SMOKE_PROJ" && vcr record-video recvidsmoke --locale en >/tmp/vcr-record-vid-smoke.log 2>&1); then
+    MP4="$(find "$SMOKE_PROJ" -name '*.mp4' -size +0c 2>/dev/null | head -1)"
+    if [ -n "$MP4" ]; then
+      pass "record-video produced MP4 ($(wc -c < "$MP4") bytes)"
+    else
+      echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+      fail "record-video produced no MP4" "see /tmp/vcr-record-vid-smoke.log"
+    fi
+  else
+    echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+    fail "record-video exited non-zero" "see /tmp/vcr-record-vid-smoke.log"
+  fi
+else
+  echo "----- /tmp/vcr-dev-vid-smoke.log (tail) -----"; tail -20 /tmp/vcr-dev-vid-smoke.log; echo "-----"
+  fail "slidev dev server never came up on :3030" "see /tmp/vcr-dev-vid-smoke.log"
+fi
+pkill -f '[v]cr dev recvidsmoke' 2>/dev/null || true
+pkill -f '[s]lidev' 2>/dev/null || true
+rm -rf "$SMOKE_PROJ"
 echo ""
 
 # ── Summary ────────────────────────────────────────────────────────────

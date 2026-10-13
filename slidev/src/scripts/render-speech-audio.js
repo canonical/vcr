@@ -29,7 +29,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 
 loadEnvFile(path.join(projectRoot, ".env.elevenlabs"));
-loadEnvFile(path.join(process.env.HOME ?? "/root", "chatterbox", ".elevenlabs.env"));
+// Under strict confinement $HOME is remapped to $SNAP_USER_DATA; snapd still
+// exposes the real user home via SNAP_REAL_HOME (unset under classic).
+loadEnvFile(path.join(process.env.SNAP_REAL_HOME ?? process.env.HOME ?? "/root", "chatterbox", ".elevenlabs.env"));
 
 const ELEVENLABS_API_KEY  = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "HEfF1IJ9HcifVBNWZdCQ";

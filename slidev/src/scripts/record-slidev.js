@@ -41,8 +41,12 @@ const timeline = [
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
+const SNAP_CHROMIUM_ARGS = process.env.SNAP
+  ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-crash-reporter"]
+  : [];
 const browser = await chromium.launch({
-  headless: true
+  headless: true,
+  args: SNAP_CHROMIUM_ARGS
 });
 
 const context = await browser.newContext({

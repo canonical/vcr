@@ -17,7 +17,7 @@ description: |
   - Static site generation for live presenting (build-slides)
 
 grade: stable
-confinement: classic
+confinement: strict
 license: Apache-2.0
 contact: https://github.com/canonical/vcr/issues
 issues: https://github.com/canonical/vcr/issues
@@ -29,12 +29,28 @@ apps:
     command: bin/vcr
     aliases:
       - vcr
+    plugs:
+      - home
+      - network
+      - network-bind
+      - browser-support
+      - opengl
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
+      FONTCONFIG_PATH: $SNAP/etc/fonts
+      # espeak-ng (piper TTS) looks for phoneme tables at a compiled-in
+      # /usr/share/espeak-ng-data which the core24 base does not ship.
+      ESPEAK_DATA_PATH: $SNAP/usr/share/espeak-ng-data
+      # Per-user writable vite dep cache (shared /tmp would collide across users)
+      VCR_VITE_CACHE: $SNAP_USER_COMMON/vite-cache
+      # Chromium crashpad needs a writable config/cache dir (GH runner bug:
+      # "chrome_crashpad_handler: --database is required").
+      XDG_CONFIG_HOME: $SNAP_USER_COMMON/config
+      XDG_CACHE_HOME: $SNAP_USER_COMMON/cache
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
       # Add both Ubuntu path and Debian alternative path for libraries.
       # Needed for ffmpeg to find the correct codec library
-      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/lib:$SNAP/usr/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
 
 parts:
   vcr-source:
@@ -79,20 +95,25 @@ parts:
       npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-seriph --prefix "${CRAFT_PART_INSTALL}"
+      # ESM imports from $SNAP/scripts (e.g. `import { chromium } from "playwright"`)
+      # resolve node_modules by walking up from the script dir; the ESM loader
+      # ignores NODE_PATH. npm --prefix installs into lib/node_modules, so expose
+      # it at the snap root as node_modules so the scripts can import it.
+      ln -sfn lib/node_modules "${CRAFT_PART_INSTALL}/node_modules"
       # Vite writes its dep cache to node_modules/.vite. When Slidev is
       # installed globally (as in this snap), it hardcodes cacheDir to
       # <cliRoot>/node_modules/.vite — read-only squashfs at runtime. Patch
-      # that to a writable /tmp dir instead of shipping an external symlink
+      # that to a writable per-user dir instead of shipping an external symlink
       # (which the Snap Store rejects as lint-snap-v2_external_symlinks).
       find "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" -name '*.mjs' -print0 \
-        | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|"/tmp/vcr-vite-cache"|g'
-      grep -Rq 'vcr-vite-cache' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
+        | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|process.env.VCR_VITE_CACHE|g'
+      grep -Rq 'VCR_VITE_CACHE' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
         || { echo "ERROR: failed to patch Slidev cacheDir" >&2; exit 1; }
-      # Wrap slidev to ensure /tmp/vcr-vite-cache exists at runtime
+      # Wrap slidev to ensure the per-user VCR_VITE_CACHE dir exists at runtime
       mv "${CRAFT_PART_INSTALL}/bin/slidev" "${CRAFT_PART_INSTALL}/bin/slidev.real"
       cat > "${CRAFT_PART_INSTALL}/bin/slidev" << 'WRAPPER'
       #!/bin/sh
-      mkdir -p /tmp/vcr-vite-cache
+      mkdir -p "${VCR_VITE_CACHE:-$SNAP_USER_COMMON/vite-cache}"
       exec "${SNAP}/bin/slidev.real" "$@"
       WRAPPER
       chmod +x "${CRAFT_PART_INSTALL}/bin/slidev"
@@ -111,6 +132,19 @@ parts:
       mkdir -p "${CRAFT_PART_INSTALL}/bin"
       cp "${CRAFT_PART_BUILD}/bin/vcr.js" "${CRAFT_PART_INSTALL}/bin/vcr"
       chmod +x "${CRAFT_PART_INSTALL}/bin/vcr"
+      # Register the staged fonts with fontconfig. Under confinement the
+      # default /usr/share/fonts resolves to the core24 base (which only ships
+      # Plymouth.ttf); the DejaVu fonts are staged under $SNAP/usr/share/fonts.
+      # /snap/video-course-recorder/current is a stable symlink to the active rev.
+      mkdir -p "${CRAFT_PART_INSTALL}/etc/fonts/conf.d"
+      cat > "${CRAFT_PART_INSTALL}/etc/fonts/conf.d/00-snap-fonts.conf" <<'FONTSCONF'
+      <?xml version="1.0"?>
+      <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+      <fontconfig>
+        <dir>/snap/video-course-recorder/current/usr/share/fonts</dir>
+        <cachedir>/tmp/vcr-fontconfig</cachedir>
+      </fontconfig>
+      FONTSCONF
 
     override-stage: |
       craftctl default
@@ -175,6 +209,11 @@ parts:
       mkdir -p "${CRAFT_PART_INSTALL}/lib/node_modules"
       cp -r "${CRAFT_PART_BUILD}/node_modules/playwright" \
         "${CRAFT_PART_INSTALL}/lib/node_modules/"
+      # playwright re-exports playwright-core; npm installs it as a dependency
+      # in the same node_modules, so stage it too or the ESM `import "playwright"`
+      # chain fails to resolve playwright-core at runtime.
+      cp -r "${CRAFT_PART_BUILD}/node_modules/playwright-core" \
+        "${CRAFT_PART_INSTALL}/lib/node_modules/"
 
       CHROME_BIN=$(ls "${BROWSERS_DIR}"/chromium-*/chrome-linux64/chrome 2>/dev/null | head -1)
       if [ -z "${CHROME_BIN}" ]; then
@@ -191,11 +230,12 @@ parts:
       # unconditionally so terminal recording works for both root and users.
       printf '%s\n' \
         '#!/bin/sh' \
-        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox "$@"' \
+        'exec "$(dirname "$(readlink -f "$0")")/chromium.real" --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-crash-reporter "$@"' \
         > "${CRAFT_PART_INSTALL}/usr/bin/chromium"
       chmod +x "${CRAFT_PART_INSTALL}/usr/bin/chromium"
     prime:
       - playwright-browsers/
       - lib/node_modules/playwright/
+      - lib/node_modules/playwright-core/
       - usr/bin/chromium
       - usr/bin/chromium.real
