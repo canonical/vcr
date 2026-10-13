@@ -32,11 +32,8 @@ apps:
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
-      # blas/lapack live in Debian alternatives subdirs (blas/, lapack/);
-      # ffmpeg links libblas.so.3/liblapack.so.3 directly, so those subdirs
-      # must be on the lib search path or ffmpeg fails at runtime with
-      # 'libblas.so.3: cannot open shared object file' (seen only where the
-      # host has no blas, e.g. CI runners).
+      # Add both Ubuntu path and Debian alternative path for libraries.
+      # Needed for ffmpeg to find the correct codec library
       LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
 
 parts:
@@ -53,9 +50,7 @@ parts:
       - libblas3
       - liblapack3
       # Runtime libs for the bundled Chromium (used by Playwright and by
-      # VHS->go-rod). Staged here (single owner) to avoid a stage-time file
-      # collision with the playwright-browsers part. Without them chrome fails
-      # with "error while loading shared libraries: libatk-1.0.so.0".
+      # VHS->go-rod). 
       - libnss3
       - libnspr4
       - libatk1.0-0t64

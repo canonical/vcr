@@ -45,7 +45,7 @@ jobs:
           name: vcr-logs
           path: /tmp/vcr-*.log
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
 
       - name: Summary
         run: |
