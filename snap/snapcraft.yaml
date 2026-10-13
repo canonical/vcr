@@ -38,10 +38,13 @@ apps:
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
       FONTCONFIG_PATH: $SNAP/etc/fonts
+      # espeak-ng (piper TTS) looks for phoneme tables at a compiled-in
+      # /usr/share/espeak-ng-data which the core24 base does not ship.
+      ESPEAK_DATA_PATH: $SNAP/usr/share/espeak-ng-data
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
       # Add both Ubuntu path and Debian alternative path for libraries.
       # Needed for ffmpeg to find the correct codec library
-      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/lib:$SNAP/usr/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
 
 parts:
   vcr-source:
@@ -86,6 +89,11 @@ parts:
       npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
       npm install -g @slidev/theme-seriph --prefix "${CRAFT_PART_INSTALL}"
+      # ESM imports from $SNAP/scripts (e.g. `import { chromium } from "playwright"`)
+      # resolve node_modules by walking up from the script dir; the ESM loader
+      # ignores NODE_PATH. npm --prefix installs into lib/node_modules, so expose
+      # it at the snap root as node_modules so the scripts can import it.
+      ln -sfn lib/node_modules "${CRAFT_PART_INSTALL}/node_modules"
       # Vite writes its dep cache to node_modules/.vite. When Slidev is
       # installed globally (as in this snap), it hardcodes cacheDir to
       # <cliRoot>/node_modules/.vite — read-only squashfs at runtime. Patch
@@ -195,6 +203,11 @@ parts:
       mkdir -p "${CRAFT_PART_INSTALL}/lib/node_modules"
       cp -r "${CRAFT_PART_BUILD}/node_modules/playwright" \
         "${CRAFT_PART_INSTALL}/lib/node_modules/"
+      # playwright re-exports playwright-core; npm installs it as a dependency
+      # in the same node_modules, so stage it too or the ESM `import "playwright"`
+      # chain fails to resolve playwright-core at runtime.
+      cp -r "${CRAFT_PART_BUILD}/node_modules/playwright-core" \
+        "${CRAFT_PART_INSTALL}/lib/node_modules/"
 
       CHROME_BIN=$(ls "${BROWSERS_DIR}"/chromium-*/chrome-linux64/chrome 2>/dev/null | head -1)
       if [ -z "${CHROME_BIN}" ]; then
@@ -217,5 +230,6 @@ parts:
     prime:
       - playwright-browsers/
       - lib/node_modules/playwright/
+      - lib/node_modules/playwright-core/
       - usr/bin/chromium
       - usr/bin/chromium.real
