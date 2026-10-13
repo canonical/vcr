@@ -32,7 +32,16 @@ execute: |
   check "bin/piper"           "Piper TTS"
   check "bin/node"            "Node.js runtime"
   check "playwright-browsers" "Playwright + Chromium browsers"
-  check "\.vite"              "Vite cache symlink → /tmp"
+  # Vite cache redirect: Slidev's cacheDir is patched to use VCR_VITE_CACHE
+  # (per-user env var) instead of a read-only squashfs path or an external symlink.
+  SLIDEV_MJS=$(unsquashfs -l "$SNAP_FILE" 2>/dev/null | grep -oE 'lib/node_modules/@slidev/cli/dist/serve-[^/]+\.mjs' | head -1)
+  if [ -n "$SLIDEV_MJS" ] && unsquashfs -cat "$SNAP_FILE" "$SLIDEV_MJS" 2>/dev/null | grep -q 'VCR_VITE_CACHE'; then
+    echo "  PASS: Vite cache redirect (VCR_VITE_CACHE)"
+  else
+    echo "  FAIL: Vite cache redirect (VCR_VITE_CACHE not found in Slidev dist)"
+    exit 1
+  fi
+
 
   echo ""
   echo "=== All checks passed ==="
