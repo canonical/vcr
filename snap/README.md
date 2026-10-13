@@ -112,7 +112,7 @@ Output: `video-course-recorder_<version>_amd64.snap`
 ## Installing
 
 ```bash
-sudo snap install ./video-course-recorder_*.snap --dangerous --classic
+sudo snap install ./video-course-recorder_*.snap --dangerous
 sudo snap alias video-course-recorder vcr   # local installs lack the store auto-alias
 vcr --help
 ```

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# VCR snap smoke test — run after `snap install video-course-recorder_*.snap --dangerous --classic`
+# VCR snap smoke test — run after `snap install video-course-recorder_*.snap --dangerous`
 set -euo pipefail
 
 RED='\033[0;31m'
@@ -22,7 +22,7 @@ echo "[1] Snap installation"
 if snap list video-course-recorder &>/dev/null; then
   pass "vcr snap is installed ($(snap list video-course-recorder | awk 'NR>1{print $2, $3}'))"
 else
-  fail "vcr snap is not installed" "run: sudo snap install ./video-course-recorder_*.snap --dangerous --classic"
+  fail "vcr snap is not installed" "run: sudo snap install ./video-course-recorder_*.snap --dangerous"
 fi
 echo ""
 

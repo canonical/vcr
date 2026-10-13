@@ -35,7 +35,7 @@ jobs:
           CONTENT_REPO_TOKEN: ${{ secrets.CONTENT_REPO_TOKEN }}
         run: |
           SNAP_FILE=$(ls video-course-recorder_*.snap | head -1)
-          sudo snap install "./$SNAP_FILE" --dangerous --classic
+          sudo snap install "./$SNAP_FILE" --dangerous
           ./snap/test-smoke.sh
 
       - name: Upload VCR logs
