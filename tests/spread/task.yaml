@@ -1,9 +1,11 @@
 summary: Verify that the VCR snap builds and is reachable under strict confinement
+kill-timeout: 2h
 
 execute: |
   echo "=== Building VCR snap ==="
   cd ../../
-  snapcraft pack --use-lxd
+  mkdir -p /tmp/craft-state
+  CRAFT_MANAGED_MODE=1 snapcraft pack --destructive-mode
 
   SNAP_FILE=$(ls video-course-recorder_*.snap 2>/dev/null | head -1)
   if [ -z "$SNAP_FILE" ]; then
