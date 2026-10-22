@@ -19,6 +19,16 @@ prepare: |
 
 path: /home/test/src/github.com/canonical/spread
 
+exclude:
+  - .git
+  - node_modules
+
+repack: |
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  tar xf /dev/fd/3 -C "$tmp"
+  tar cf - --owner=0 --group=0 --numeric-owner -C "$tmp" . >&4
+
 restore: |
   cd /vcr && snapcraft clean 2>/dev/null || true
 

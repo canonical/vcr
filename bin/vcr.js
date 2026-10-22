@@ -63,6 +63,14 @@ const COMMANDS = {
     usage: "<module> [--locale en] [--base /subpath]",
     moduleAware: true,
   },
+  "export-slides": {
+    script: null,
+    exec: "slidev",
+    execSub: "export",
+    desc: "Export slides to PDF/PNG/PPTX/MD",
+    usage: "<module> [--locale en] [--format pdf|png|pptx|pptx-editable|md] [--output <path>] [--per-slide] [--dark] [--with-clicks]",
+    moduleAware: true,
+  },
   "build-scorm": {
     desc: "Build SCORM 1.2 ZIP package for LMS delivery",
     usage: "<module> [--locale en]",
@@ -171,6 +179,7 @@ function showHelp() {
   };
 
   const groupMap = {
+    "export-slides": "Build",
     dev: "Operations", validate: "Operations",
     help: "Meta", version: "Meta",
   };
@@ -271,16 +280,67 @@ async function main() {
       process.exit(1);
     }
 
-    console.log(`Module: ${mod.module}/${mod.locale}  (${mod.index})`);
+    process.stderr.write(`Module: ${mod.module}/${mod.locale}  (${mod.index})\n`);
 
     if (cmd.exec) {
       // Commands that exec a binary (slidev)
       // dev -> `slidev <index>` (dev server)
       // build-slides -> `slidev build <index> --out dist`
-      const execArgs = cmd.execSub
-        ? [cmd.execSub, mod.index, "--out", "dist", ...parsed.rest]
-        : [mod.index, ...parsed.rest];
-      return runCommand(cmd.exec, execArgs, { cwd: mod.modDir });
+      let execArgs;
+      let outPath = null; // absolute path to produced output (file or dir)
+      if (cmd.execSub === "build") {
+        // Respect user --out if given, else default to dist/
+        let outDir = "dist";
+        for (let i = 0; i < parsed.rest.length; i++) {
+          if (parsed.rest[i] === "--out" || parsed.rest[i] === "-o") outDir = parsed.rest[i + 1] ?? outDir;
+          else if (parsed.rest[i].startsWith("--out=")) outDir = parsed.rest[i].split("=")[1];
+        }
+        const hasOut = parsed.rest.some((a) => a === "--out" || a === "-o" || a.startsWith("--out="));
+        execArgs = hasOut
+          ? ["build", mod.index, ...parsed.rest]
+          : ["build", mod.index, "--out", "dist", ...parsed.rest];
+        outPath = path.resolve(mod.modDir, outDir);
+      } else if (cmd.execSub === "export") {
+        // Default output next to the module; user can override with --output
+        let userOut = null;
+        for (let i = 0; i < parsed.rest.length; i++) {
+          if (parsed.rest[i] === "--output") userOut = parsed.rest[i + 1] ?? userOut;
+          else if (parsed.rest[i].startsWith("--output=")) userOut = parsed.rest[i].split("=")[1];
+        }
+        let fmt = "pdf";
+        for (let i = 0; i < parsed.rest.length; i++) {
+          if (parsed.rest[i] === "--format") fmt = parsed.rest[i + 1] ?? fmt;
+          else if (parsed.rest[i].startsWith("--format=")) fmt = parsed.rest[i].split("=")[1];
+        }
+        const extMap = { pdf: "pdf", png: "png", pptx: "pptx", "pptx-editable": "pptx", md: "md" };
+        const ext = extMap[fmt] ?? "pdf";
+        if (userOut) {
+          outPath = path.resolve(mod.modDir, userOut);
+          execArgs = ["export", mod.index, ...parsed.rest];
+        } else {
+          outPath = path.join(mod.modDir, `${mod.module}-${mod.locale}.${ext}`);
+          execArgs = ["export", mod.index, "--output", outPath, ...parsed.rest];
+        }
+      } else if (cmd.execSub) {
+        execArgs = [cmd.execSub, mod.index, ...parsed.rest];
+      } else {
+        execArgs = [mod.index, ...parsed.rest];
+      }
+
+      // Long-running interactive commands (dev server) stream directly.
+      if (command === "dev") {
+        return runDevServer(cmd.exec, execArgs, { cwd: mod.modDir });
+      }
+
+      // Everything else: quiet spinner, logs only on error, then report output path.
+      const label = `${command} ${mod.module}/${mod.locale}`;
+      return runCommandQuiet(cmd.exec, execArgs, { cwd: mod.modDir, label }).then(() => {
+        if (outPath) {
+          const rel = path.relative(mod.repo, outPath) || path.basename(outPath);
+          process.stderr.write(`Output: ${rel}\n`);
+          process.stderr.write(`        (${outPath})\n`);
+        }
+      });
     }
 
     if (cmd.script) {
@@ -325,6 +385,79 @@ function runScript(scriptPath, args, opts = {}) {
   });
 }
 
+// Dev server (slidev): long-running + interactive. Minimal passthrough —
+// strip slidev's startup banner noise/branding, keep the essential URLs and
+// shortcuts, and pass everything else through verbatim.
+function runDevServer(cmd, args, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args, {
+      stdio: ["inherit", "pipe", "pipe"],
+      env: process.env,
+      cwd: opts.cwd ?? process.cwd(),
+    });
+
+    let startupDone = false;
+    const buffers = new Map([[process.stdout, ""], [process.stderr, ""]]);
+
+    // Lines to drop from Slidev's startup banner (branding + extra URLs).
+    const dropPatterns = [
+      /^\s*[\u25cf\u25a0\u25b2]+\s*$/,  // logo glyphs
+      /^\s*Slidev\s+v\S+/i,             // version line
+      /^\s*theme\s+/i,
+      /^\s*css engine\s+/i,
+      /^\s*entry\s+/i,
+      /^\s*slides overview\s+>/i,
+      /^\s*export slides\s+>/i,
+      /^\s*mcp server\s+>/i,
+      /^\s*remote control\s+>/i,
+    ];
+    // Last banner line we keep. Slidev prints a new banner after restart.
+    const startupEnd = /^\s*shortcuts\s+>/i;
+    const restartNotice = /^\s*restarting(?:\s|\.|$)/i;
+
+    // Strip ANSI color/style escapes before pattern-matching.
+    const stripAnsi = (str) =>
+      str.replace(/\u001b\[[0-9;]*[A-Za-z]/g, "");
+
+    const handleLine = (line, stream) => {
+      const plain = stripAnsi(line);
+      if (startupDone && restartNotice.test(plain)) {
+        stream.write(line + "\n");
+        startupDone = false;
+        return;
+      }
+      // Recover if Slidev starts a new banner without a restart message.
+      if (startupDone && /^\s*Slidev\s+v\S+/i.test(plain))
+        startupDone = false;
+      if (startupEnd.test(plain)) {
+        stream.write(line + "\n"); // keep original (colored) line
+        startupDone = true;
+        return;
+      }
+      if (dropPatterns.some((re) => re.test(plain))) return;
+      stream.write(line + "\n");
+    };
+
+    const handle = (chunk, stream) => {
+      const lines = (buffers.get(stream) + chunk.toString()).split("\n");
+      buffers.set(stream, lines.pop() ?? ""); // keep incomplete trailing line buffered
+      for (const line of lines) handleLine(line, stream);
+    };
+
+    proc.stdout.on("data", (c) => handle(c, process.stdout));
+    proc.stderr.on("data", (c) => handle(c, process.stderr));
+
+    proc.on("error", reject);
+    proc.on("exit", (code, signal) => {
+      for (const [stream, buf] of buffers) {
+        if (buf) stream.write(buf);
+      }
+      if (code === 0) resolve();
+      else reject(new Error(`${cmd} exited with ${signal ?? code}`));
+    });
+  });
+}
+
 function runCommand(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, {
@@ -336,6 +469,59 @@ function runCommand(cmd, args, opts = {}) {
     proc.on("exit", (code, signal) => {
       if (code === 0) resolve();
       else reject(new Error(`${cmd} exited with ${signal ?? code}`));
+    });
+  });
+}
+
+// Run a command with a spinner/progress indicator instead of streaming its
+// logs. Captures stdout+stderr and only prints them if the command fails.
+function runCommandQuiet(cmd, args, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const label = opts.label ?? cmd;
+    const isTTY = process.stderr.isTTY;
+    const frames = ["\u280b","\u2819","\u2839","\u2838","\u283c","\u2834","\u2826","\u2827","\u2807","\u280f"];
+    const start = Date.now();
+    let i = 0;
+    let buf = "";
+    const onData = (d) => { buf += d.toString(); };
+
+    const proc = spawn(cmd, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+      cwd: opts.cwd ?? process.cwd(),
+    });
+    proc.stdout.on("data", onData);
+    proc.stderr.on("data", onData);
+
+    let timer = null;
+    const render = () => {
+      const secs = Math.round((Date.now() - start) / 1000);
+      process.stderr.write(`\r${frames[i = (i + 1) % frames.length]} ${label} (${secs}s)   `);
+    };
+    if (isTTY) {
+      process.stderr.write(`\u280b ${label} (0s)   `);
+      timer = setInterval(render, 100);
+    } else {
+      process.stderr.write(`${label}... `);
+    }
+
+    const clearLine = () => {
+      if (timer) clearInterval(timer);
+      if (isTTY) process.stderr.write("\r\u001b[2K");
+    };
+
+    proc.on("error", (err) => { clearLine(); if (buf.trim()) process.stderr.write(buf); reject(err); });
+    proc.on("exit", (code, signal) => {
+      clearLine();
+      const secs = Math.round((Date.now() - start) / 1000);
+      if (code === 0) {
+        process.stderr.write(`\u2713 ${label} (${secs}s)\n`);
+        resolve();
+      } else {
+        console.error(`\u2717 ${label} failed (exit ${signal ?? code})\n`);
+        if (buf.trim()) process.stderr.write(buf.endsWith("\n") ? buf : buf + "\n");
+        reject(new Error(`${cmd} exited with ${signal ?? code}`));
+      }
     });
   });
 }
