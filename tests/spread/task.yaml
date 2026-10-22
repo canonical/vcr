@@ -64,8 +64,29 @@ execute: |
   fi
 
   echo ""
+  echo "=== Dev shortcuts match packaged capabilities ==="
+  SNAP_ROOT=$(readlink -f /snap/video-course-recorder/current)
+  SLIDEV_CLI="$SNAP_ROOT/lib/node_modules/@slidev/cli/dist/cli.mjs"
+  if grep -Eq 'fullname: "edit"|underline\("e"\)' "$SLIDEV_CLI"; then
+    echo "  FAIL: unsupported editor shortcut is present"
+    exit 1
+  fi
+  if grep -Fq 'fullname: "open"' "$SLIDEV_CLI" && grep -Fq 'fullname: "restart"' "$SLIDEV_CLI"; then
+    echo "  PASS: open/restart remain and edit shortcut is absent"
+  else
+    echo "  FAIL: expected open/restart shortcuts are missing"
+    exit 1
+  fi
+  if grep -Fq 'await openBrowser(url, { app: { name: "xdg-open" }, wait: true });' "$SLIDEV_CLI"; then
+    echo "  PASS: Open hands the URL to the host desktop/browser integration"
+  else
+    echo "  FAIL: Open is not routed through the host desktop/browser integration"
+    exit 1
+  fi
+
+  echo ""
   echo "=== Auto-connected plugs (no manual snap connect needed) ==="
-  for plug in home network network-bind browser-support opengl; do
+  for plug in home network network-bind browser-support desktop desktop-legacy opengl; do
     if snap connections video-course-recorder | grep -q "video-course-recorder:$plug *:$plug"; then
       echo "  PASS: $plug auto-connected"
     else

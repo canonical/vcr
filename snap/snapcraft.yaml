@@ -34,6 +34,8 @@ apps:
       - network
       - network-bind
       - browser-support
+      - desktop
+      - desktop-legacy
       - opengl
     environment:
       PLAYWRIGHT_BROWSERS_PATH: $SNAP/playwright-browsers
@@ -92,9 +94,9 @@ parts:
         rm -f "${d}"libzstd.so.1.3.* "${d}"libzstd.so.1.4.*
       done
       # Install slidev globally so 'slidev' is on $SNAP/bin
-      npm install -g @slidev/cli --prefix "${CRAFT_PART_INSTALL}"
-      npm install -g @slidev/theme-default --prefix "${CRAFT_PART_INSTALL}"
-      npm install -g @slidev/theme-seriph --prefix "${CRAFT_PART_INSTALL}"
+      npm install -g @slidev/cli@53.0.0 --prefix "${CRAFT_PART_INSTALL}"
+      npm install -g @slidev/theme-default@0.25.0 --prefix "${CRAFT_PART_INSTALL}"
+      npm install -g @slidev/theme-seriph@0.25.0 --prefix "${CRAFT_PART_INSTALL}"
       # ESM imports from $SNAP/scripts (e.g. `import { chromium } from "playwright"`)
       # resolve node_modules by walking up from the script dir; the ESM loader
       # ignores NODE_PATH. npm --prefix installs into lib/node_modules, so expose
@@ -109,6 +111,51 @@ parts:
         | xargs -0 sed -i 's|join(options\.cliRoot, "node_modules/\.vite")|process.env.VCR_VITE_CACHE|g'
       grep -Rq 'VCR_VITE_CACHE' "${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist" \
         || { echo "ERROR: failed to patch Slidev cacheDir" >&2; exit 1; }
+      # Slidev's edit shortcut assumes an external editor is available inside
+      # the snap. Remove it rather than advertising a shortcut that may fail
+      # under confinement or when the user's editor is not in the snap PATH.
+      SLIDEV_CLI="${CRAFT_PART_INSTALL}/lib/node_modules/@slidev/cli/dist/cli.mjs"
+      python3 - "${SLIDEV_CLI}" <<'PYTHON'
+      from pathlib import Path
+      import sys
+      p = Path(sys.argv[1])
+      s = p.read_text()
+      editor_action = (
+          '\t\t{\n'
+          '\t\t\tname: "e",\n'
+          '\t\t\tfullname: "edit",\n'
+          '\t\t\taction() {\n'
+          '\t\t\t\tconst editor = process.env.EDITOR || "code";\n'
+          '\t\t\t\texecFile(editor, [entry]);\n'
+          '\t\t\t}\n'
+          '\t\t},\n'
+      )
+      if s.count(editor_action) != 1:
+          raise SystemExit("ERROR: expected exactly one upstream Slidev edit shortcut; refusing to patch")
+      s = s.replace(editor_action, "")
+      banner_edit = '${underline("e")}${dim("dit | ")}'
+      if s.count(banner_edit) != 1:
+          raise SystemExit("ERROR: expected exactly one Slidev edit banner entry; refusing to patch")
+      s = s.replace(banner_edit, "")
+      import_line = 'import { execFile } from "node:child_process";\n'
+      if s.count(import_line) != 1:
+          raise SystemExit("ERROR: unexpected Slidev child_process import; refusing to patch")
+      s = s.replace(import_line, "")
+      if 'fullname: "edit"' in s or banner_edit in s or "execFile(editor" in s:
+          raise SystemExit("ERROR: edit shortcut remains after patch")
+      open_call = "await openBrowser(url);"
+      if s.count(open_call) != 1:
+          raise SystemExit("ERROR: expected exactly one Slidev browser-open call; refusing to patch")
+      s = s.replace(open_call, 'await openBrowser(url, { app: { name: "xdg-open" }, wait: true });')
+      if 'await openBrowser(url, { app: { name: "xdg-open" }, wait: true });' not in s:
+          raise SystemExit("ERROR: failed to route browser open through Snap host integration")
+      p.write_text(s)
+      PYTHON
+      grep -Fq 'fullname: "open"' "${SLIDEV_CLI}" \
+        || { echo "ERROR: Slidev open shortcut missing after edit removal" >&2; exit 1; }
+      grep -Fq 'shortcuts "' "${SLIDEV_CLI}" \
+        || { echo "ERROR: Slidev shortcuts banner missing after edit removal" >&2; exit 1; }
+      node --check "${SLIDEV_CLI}"
       # Wrap slidev to ensure the per-user VCR_VITE_CACHE dir exists at runtime
       mv "${CRAFT_PART_INSTALL}/bin/slidev" "${CRAFT_PART_INSTALL}/bin/slidev.real"
       cat > "${CRAFT_PART_INSTALL}/bin/slidev" << 'WRAPPER'
@@ -198,10 +245,12 @@ parts:
       - libasound2t64
     override-build: |
       set -eu
-      PLAYWRIGHT_VERSION="1.61.0"
+      PLAYWRIGHT_VERSION="1.64.0"
       BROWSERS_DIR="${CRAFT_PART_INSTALL}/playwright-browsers"
 
-      "${CRAFT_STAGE}/bin/npm" install "playwright@${PLAYWRIGHT_VERSION}" \
+      "${CRAFT_STAGE}/bin/npm" install \
+        "playwright@${PLAYWRIGHT_VERSION}" \
+        "playwright-chromium@${PLAYWRIGHT_VERSION}" \
         --prefix "${CRAFT_PART_BUILD}"
       PLAYWRIGHT_BROWSERS_PATH="${BROWSERS_DIR}" \
         "${CRAFT_PART_BUILD}/node_modules/.bin/playwright" install chromium
@@ -213,6 +262,11 @@ parts:
       # in the same node_modules, so stage it too or the ESM `import "playwright"`
       # chain fails to resolve playwright-core at runtime.
       cp -r "${CRAFT_PART_BUILD}/node_modules/playwright-core" \
+        "${CRAFT_PART_INSTALL}/lib/node_modules/"
+      # Slidev's `slidev export` does a hard `import("playwright-chromium")`,
+      # which is a separate package from `playwright`. Stage it too (it
+      # re-exports playwright-core and reuses the same bundled browsers).
+      cp -r "${CRAFT_PART_BUILD}/node_modules/playwright-chromium" \
         "${CRAFT_PART_INSTALL}/lib/node_modules/"
 
       CHROME_BIN=$(ls "${BROWSERS_DIR}"/chromium-*/chrome-linux64/chrome 2>/dev/null | head -1)
@@ -237,5 +291,6 @@ parts:
       - playwright-browsers/
       - lib/node_modules/playwright/
       - lib/node_modules/playwright-core/
+      - lib/node_modules/playwright-chromium/
       - usr/bin/chromium
       - usr/bin/chromium.real
