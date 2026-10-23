@@ -103,6 +103,28 @@ else
 fi
 echo ""
 
+# ── 4b. Packaged recording regression tests ────────────────────────────
+echo "[4b] Packaged recording and automatic-duration regression tests"
+TEST_LOG="/tmp/vcr-recording-tests.log"
+if [ -s "$SNAP_ROOT/scripts/generate-durations.test.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/recording-durations.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/recording-durations.test.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/slidev-server.test.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/record-video.test.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/cli-render.test.js" ] \
+    && "$SNAP_NODE" --test \
+      "$SNAP_ROOT/scripts/generate-durations.test.js" \
+      "$SNAP_ROOT/scripts/recording-durations.test.js" \
+      "$SNAP_ROOT/scripts/slidev-server.test.js" \
+      "$SNAP_ROOT/scripts/record-video.test.js" \
+      "$SNAP_ROOT/scripts/cli-render.test.js" >"$TEST_LOG" 2>&1; then
+  pass "packaged CLI and recording regression tests pass"
+else
+  echo "----- $TEST_LOG (tail) -----"; tail -60 "$TEST_LOG" 2>/dev/null || true; echo "-----"
+  fail "packaged recording or automatic-timing regression tests failed or are missing" "see $TEST_LOG and rebuild the snap from this checkout"
+fi
+echo ""
+
 # ── 5. slidev wrapper (internal) ───────────────────────────────────────
 echo "[5] slidev wrapper"
 SLIDEV_BIN="/snap/video-course-recorder/current/bin/slidev"
@@ -157,7 +179,7 @@ echo ""
 
 # ── 8. Real content: clone repo, build slides, render terminal GIF ─────
 echo "[8] Real content workflow (partner-enablement)"
-CONTENT_REPO="${HOME}/workspace/partner-enablement"
+CONTENT_REPO="${VCR_SMOKE_CONTENT_REPO:-${HOME}/workspace/partner-enablement}"
 REPO_URL="https://github.com/canonical/partner-enablement.git"
 CLONE_OK=0  # becomes 1 only after a successful clone
 
@@ -334,107 +356,160 @@ fi
 rm -rf "$SMOKE_PROJ"
 echo ""
 
-# ── 11. Offline deck recording (slidev dev + chromium → WebM) ──────────
-echo "[11] Deck recording (record-animated, offline)"
-SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
-mkdir -p "$SMOKE_PROJ/modules/recsmoke/en"
-cat > "$SMOKE_PROJ/package.json" <<'JSON'
-{"name":"vcr-smoke","private":true}
-JSON
-cat > "$SMOKE_PROJ/modules/recsmoke/en/index.md" <<'MD'
----
-theme: default
----
+# ── 11. Real partner-enablement deck recording (WebM, automatic Slidev) ──
+echo "[11] Partner-enablement recording (record-video --format webm)"
+# Keep outputs in the shared home-mounted content checkout. Snap's private /tmp
+# namespace cannot see host-created timing files or expose output files back here.
+RECORD_TMP="$(mktemp -d "$CONTENT_REPO/vcr-partner-record-smoke.XXXXXX")"
+RENDER_SMOKE_DIR=""
+cleanup_recording_smoke() {
+  [ -z "$RECORD_TMP" ] || rm -rf "$RECORD_TMP"
+  [ -z "$RENDER_SMOKE_DIR" ] || rm -rf "$RENDER_SMOKE_DIR"
+}
+trap cleanup_recording_smoke EXIT
+# The recorder generates slide timings inside its own confined temporary directory.
 
-# Record smoke
+assert_record_server_stopped() {
+  local log_file="$1" port
+  port=$(grep -oE 'Slidev ready at http://(localhost|127\.0\.0\.1):[0-9]+' "$log_file" 2>/dev/null | tail -1 | grep -oE '[0-9]+$' || true)
+  if [ -z "$port" ]; then
+    fail "recording did not report its temporary Slidev server" "see $log_file"
+  elif ss -ltn 2>/dev/null | grep -qE ":${port}([[:space:]]|$)"; then
+    fail "temporary Slidev server still listens on port $port" "record command should stop the server"
+  else
+    pass "temporary Slidev server on port $port stopped after recording"
+  fi
+}
 
-Slide one.
-
----
-
-## Slide two
-
-- bullet a
-- bullet b
-MD
-( cd "$SMOKE_PROJ" && nohup vcr dev recsmoke --locale en >/tmp/vcr-dev-smoke.log 2>&1 ) &
-DEV_READY=0
-for _ in $(seq 1 60); do
-  if ss -ltn 2>/dev/null | grep -q ':3030'; then DEV_READY=1; break; fi
-  sleep 1
-done
-if [ "$DEV_READY" -eq 1 ]; then
-  if (cd "$SMOKE_PROJ" && vcr record-animated recsmoke --locale en >/tmp/vcr-record-smoke.log 2>&1); then
-    REC="$(find "$SMOKE_PROJ" -name '*.webm' -size +0c 2>/dev/null | head -1)"
-    if [ -n "$REC" ]; then
-      pass "record-animated produced WebM ($(wc -c < "$REC") bytes)"
+if [ ! -s "$CONTENT_REPO/modules/ubuntu/en/index.md" ]; then
+  fail "partner-enablement Ubuntu deck is unavailable" \
+       "expected $CONTENT_REPO/modules/ubuntu/en/index.md; set VCR_SMOKE_CONTENT_REPO to the existing clone"
+else
+  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL -u RECORD_VIDEO_DURATIONS_FILE -u ANIMATED_STEP_DURATION_MS \
+      VIDEO_OUT_DIR="$RECORD_TMP/animated" \
+      VIDEO_OUTPUT_NAME=partner-ubuntu-webm.webm \
+      vcr record-video ubuntu --locale en --format webm \
+      >/tmp/vcr-record-smoke.log 2>&1); then
+    REC="$RECORD_TMP/animated/partner-ubuntu-webm.webm"
+    if ! grep -q "Generated per-slide recording timings" /tmp/vcr-record-smoke.log; then
+      fail "record-video did not generate timings automatically" "see /tmp/vcr-record-smoke.log"
+    fi
+    if [ -s "$REC" ] && [ ! -e "$RECORD_TMP/animated/partner-ubuntu-webm.mp4" ]; then
+      pass "record-video --format webm captured partner-enablement Ubuntu deck ($(wc -c < "$REC") bytes)"
     else
       echo "----- /tmp/vcr-record-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-smoke.log; echo "-----"
-      fail "record-animated produced no WebM" "see /tmp/vcr-record-smoke.log"
+      fail "record-video --format webm did not produce only a WebM for partner-enablement" "see /tmp/vcr-record-smoke.log"
     fi
   else
     echo "----- /tmp/vcr-record-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-smoke.log; echo "-----"
-    fail "record-animated exited non-zero" "see /tmp/vcr-record-smoke.log"
+    fail "record-video --format webm failed on partner-enablement" "see /tmp/vcr-record-smoke.log"
   fi
-else
-  echo "----- /tmp/vcr-dev-smoke.log (tail) -----"; tail -20 /tmp/vcr-dev-smoke.log; echo "-----"
-  fail "slidev dev server never came up on :3030" "see /tmp/vcr-dev-smoke.log"
+  assert_record_server_stopped /tmp/vcr-record-smoke.log
 fi
-pkill -f '[v]cr dev recsmoke' 2>/dev/null || true
-pkill -f '[s]lidev' 2>/dev/null || true
-rm -rf "$SMOKE_PROJ"
 echo ""
 
-# ── 12. Offline deck recording + MP4 mux (record-video) ────────────────
-echo "[12] MP4 conversion (record-video, offline)"
-SMOKE_PROJ="$(mktemp -d "${HOME}/vcr-smoke.XXXXXX")"
-mkdir -p "$SMOKE_PROJ/modules/recvidsmoke/en"
-cat > "$SMOKE_PROJ/package.json" <<'JSON'
-{"name":"vcr-smoke","private":true}
-JSON
-cat > "$SMOKE_PROJ/modules/recvidsmoke/en/index.md" <<'MD'
+# ── 12. Partner-enablement deck recording (MP4) ─────────────────────────
+echo "[12] Partner-enablement recording (record-video --format mp4)"
+if [ -s "$CONTENT_REPO/modules/ubuntu/en/index.md" ]; then
+  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL -u RECORD_VIDEO_DURATIONS_FILE -u ANIMATED_STEP_DURATION_MS \
+      VIDEO_OUT_DIR="$RECORD_TMP/video" \
+      VIDEO_OUTPUT_NAME=partner-ubuntu-video.webm \
+      vcr record-video ubuntu --locale en --format=mp4 \
+      >/tmp/vcr-record-vid-smoke.log 2>&1); then
+    MP4="$RECORD_TMP/video/partner-ubuntu-video.mp4"
+    if ! grep -q "Generated per-slide recording timings" /tmp/vcr-record-vid-smoke.log; then
+      fail "record-video did not generate timings automatically for MP4" "see /tmp/vcr-record-vid-smoke.log"
+    fi
+    if [ -s "$MP4" ] && [ ! -e "$RECORD_TMP/video/partner-ubuntu-video.webm" ]; then
+      pass "record-video --format mp4 captured partner-enablement Ubuntu deck ($(wc -c < "$MP4") bytes)"
+    else
+      echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+      fail "record-video --format mp4 did not produce only an MP4 for partner-enablement" "see /tmp/vcr-record-vid-smoke.log"
+    fi
+  else
+    echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
+    fail "record-video --format mp4 failed on partner-enablement" "see /tmp/vcr-record-vid-smoke.log"
+  fi
+  assert_record_server_stopped /tmp/vcr-record-vid-smoke.log
+else
+  fail "partner-enablement Ubuntu deck is unavailable for record-video" \
+       "expected $CONTENT_REPO/modules/ubuntu/en/index.md"
+fi
+rm -rf "$RECORD_TMP"
+RECORD_TMP=""
+echo ""
+
+# ── 13. Renderers write real artifacts in partner-enablement ────────────
+echo "[13] Renderer artifacts (partner-enablement fixture)"
+RENDER_SMOKE_MOD="_vcr_render_smoke_$$"
+RENDER_SMOKE_DIR="$CONTENT_REPO/modules/$RENDER_SMOKE_MOD/en"
+mkdir -p "$RENDER_SMOKE_DIR"
+cat > "$RENDER_SMOKE_DIR/index.md" <<'MD'
 ---
 theme: default
 ---
 
-# Record video smoke
+# Render smoke
 
-Slide one.
+```speech name=smoke
+This is a short speech rendering smoke test.
+```
 
----
+```terminal
+Type "echo vcr-render-smoke"
+Enter
+Sleep 1s
+```
 
-## Slide two
-
-- bullet a
-- bullet b
+```playwright name=smoke width=640 height=360
+export default async function ({ page, demo }) {
+  await page.goto("data:text/html,<h1>VCR render smoke</h1>");
+  await demo.wait(200);
+}
+```
 MD
-( cd "$SMOKE_PROJ" && nohup vcr dev recvidsmoke --locale en >/tmp/vcr-dev-vid-smoke.log 2>&1 ) &
-DEV_READY=0
-for _ in $(seq 1 60); do
-  if ss -ltn 2>/dev/null | grep -q ':3030'; then DEV_READY=1; break; fi
-  sleep 1
-done
-if [ "$DEV_READY" -eq 1 ]; then
-  if (cd "$SMOKE_PROJ" && vcr record-video recvidsmoke --locale en >/tmp/vcr-record-vid-smoke.log 2>&1); then
-    MP4="$(find "$SMOKE_PROJ" -name '*.mp4' -size +0c 2>/dev/null | head -1)"
-    if [ -n "$MP4" ]; then
-      pass "record-video produced MP4 ($(wc -c < "$MP4") bytes)"
-    else
-      echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
-      fail "record-video produced no MP4" "see /tmp/vcr-record-vid-smoke.log"
-    fi
+
+PIPER_VOICE="/snap/video-course-recorder/current/voices/en_US-lessac-medium.onnx"
+if (cd "$CONTENT_REPO" && vcr render-audio "$RENDER_SMOKE_MOD" --locale en --model "$PIPER_VOICE" >/tmp/vcr-render-smoke-audio.log 2>&1); then
+  AUDIO="$(find "$RENDER_SMOKE_DIR/audio-cache" -type f -name '*.wav' -size +0c 2>/dev/null | head -1)"
+  if [ -n "$AUDIO" ]; then
+    pass "render-audio produced WAV ($(wc -c < "$AUDIO") bytes)"
   else
-    echo "----- /tmp/vcr-record-vid-smoke.log (tail) -----"; tail -40 /tmp/vcr-record-vid-smoke.log; echo "-----"
-    fail "record-video exited non-zero" "see /tmp/vcr-record-vid-smoke.log"
+    echo "----- /tmp/vcr-render-smoke-audio.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-audio.log; echo "-----"
+    fail "render-audio produced no WAV" "see /tmp/vcr-render-smoke-audio.log"
   fi
 else
-  echo "----- /tmp/vcr-dev-vid-smoke.log (tail) -----"; tail -20 /tmp/vcr-dev-vid-smoke.log; echo "-----"
-  fail "slidev dev server never came up on :3030" "see /tmp/vcr-dev-vid-smoke.log"
+  echo "----- /tmp/vcr-render-smoke-audio.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-audio.log; echo "-----"
+  fail "render-audio failed" "see /tmp/vcr-render-smoke-audio.log"
 fi
-pkill -f '[v]cr dev recvidsmoke' 2>/dev/null || true
-pkill -f '[s]lidev' 2>/dev/null || true
-rm -rf "$SMOKE_PROJ"
-echo ""
+
+if (cd "$CONTENT_REPO" && vcr render-terminal "$RENDER_SMOKE_MOD" --locale en >/tmp/vcr-render-smoke-terminal.log 2>&1); then
+  GIF="$(find "$RENDER_SMOKE_DIR/terminal-cache" -type f -name '*.gif' -size +0c 2>/dev/null | head -1)"
+  if [ -n "$GIF" ]; then
+    pass "render-terminal produced GIF ($(wc -c < "$GIF") bytes)"
+  else
+    echo "----- /tmp/vcr-render-smoke-terminal.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-terminal.log; echo "-----"
+    fail "render-terminal produced no GIF" "see /tmp/vcr-render-smoke-terminal.log"
+  fi
+else
+  echo "----- /tmp/vcr-render-smoke-terminal.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-terminal.log; echo "-----"
+  fail "render-terminal failed" "see /tmp/vcr-render-smoke-terminal.log"
+fi
+
+if (cd "$CONTENT_REPO" && vcr render-playwright "$RENDER_SMOKE_MOD" --locale en >/tmp/vcr-render-smoke-playwright.log 2>&1); then
+  WEBM="$(find "$RENDER_SMOKE_DIR/playwright-cache" -type f -name '*.webm' -size +0c 2>/dev/null | head -1)"
+  if [ -n "$WEBM" ]; then
+    pass "render-playwright produced WebM ($(wc -c < "$WEBM") bytes)"
+  else
+    echo "----- /tmp/vcr-render-smoke-playwright.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-playwright.log; echo "-----"
+    fail "render-playwright produced no WebM" "see /tmp/vcr-render-smoke-playwright.log"
+  fi
+else
+  echo "----- /tmp/vcr-render-smoke-playwright.log (tail) -----"; tail -40 /tmp/vcr-render-smoke-playwright.log; echo "-----"
+  fail "render-playwright failed" "see /tmp/vcr-render-smoke-playwright.log"
+fi
+rm -rf "$RENDER_SMOKE_DIR"
+RENDER_SMOKE_DIR=""
 
 # ── Summary ────────────────────────────────────────────────────────────
 echo "=== Results: ${PASS} passed, ${FAIL} failed ==="

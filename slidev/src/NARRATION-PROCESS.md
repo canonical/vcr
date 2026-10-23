@@ -148,9 +148,10 @@ Output file extension should become `.mp3`; update `buildCachedBlock` to use `fo
 No Slidev configuration is needed. The `<audio autoplay>` element fires when the
 slide renders. In presentation mode the narration plays as the slide appears.
 
-In non-interactive (video export) mode, `record-slidev-animated.js` uses a
-`durations-file` to hold each slide open long enough for the audio to finish.
-Match the wait duration to the audio length (in ms) for each slide.
+In non-interactive (video export) mode, `record-slidev-animated.js` automatically
+generates per-slide timing data from the deck when no timing file or uniform step
+duration is supplied. To override it, pass an explicit `--durations-file`; the file
+holds one duration per slide/click advance and should match audio lengths (in ms).
 
 ```
 # durations.txt — one value per click/advance step

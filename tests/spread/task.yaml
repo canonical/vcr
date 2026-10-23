@@ -34,6 +34,16 @@ execute: |
   check "bin/piper"           "Piper TTS"
   check "bin/node"            "Node.js runtime"
   check "playwright-browsers" "Playwright + Chromium browsers"
+  check "scripts/generate-durations.js" "per-slide duration generator"
+  check "scripts/generate-durations.test.js" "duration generator regression tests"
+  check "scripts/recording-durations.js" "automatic recording duration helper"
+  check "scripts/recording-durations.test.js" "automatic recording duration regression tests"
+  check "scripts/slidev-server.js" "managed Slidev server helper"
+  check "scripts/slidev-server.test.js" "managed Slidev server regression tests"
+  check "scripts/record-video.test.js" "recording format regression tests"
+  check "scripts/cli-render.test.js" "render CLI regression tests"
+  check "scripts/record-slidev-animated.js" "internal Slidev capture engine"
+  check "scripts/record-video.js" "format-selectable deck recorder"
   # Vite cache redirect: Slidev's cacheDir is patched to use VCR_VITE_CACHE
   # (per-user env var) instead of a read-only squashfs path or an external symlink.
   SLIDEV_MJS=$(unsquashfs -l "$SNAP_FILE" 2>/dev/null | grep -oE 'lib/node_modules/@slidev/cli/dist/serve-[^/]+\.mjs' | head -1)
@@ -65,9 +75,23 @@ execute: |
     exit 1
   fi
 
+  SNAP_ROOT=$(readlink -f /snap/video-course-recorder/current)
+  echo ""
+  echo "=== Packaged CLI render, recording, and timing regression tests ==="
+  if "$SNAP_ROOT/bin/node" --test \
+      "$SNAP_ROOT/scripts/generate-durations.test.js" \
+      "$SNAP_ROOT/scripts/recording-durations.test.js" \
+      "$SNAP_ROOT/scripts/slidev-server.test.js" \
+      "$SNAP_ROOT/scripts/record-video.test.js" \
+      "$SNAP_ROOT/scripts/cli-render.test.js"; then
+    echo "  PASS: packaged CLI render, recording, and timing tests"
+  else
+    echo "  FAIL: packaged CLI render, recording, and timing tests"
+    exit 1
+  fi
+
   echo ""
   echo "=== Dev shortcuts match packaged capabilities ==="
-  SNAP_ROOT=$(readlink -f /snap/video-course-recorder/current)
   SLIDEV_CLI="$SNAP_ROOT/lib/node_modules/@slidev/cli/dist/cli.mjs"
   if grep -Eq 'fullname: "edit"|underline\("e"\)' "$SLIDEV_CLI"; then
     echo "  FAIL: unsupported editor shortcut is present"
