@@ -1,5 +1,7 @@
 # VCR — Video Course Recorder
 
+[![video-course-recorder](https://snapcraft.io/video-course-recorder/badge.svg)](https://snapcraft.io/video-course-recorder)
+
 VCR turns training courses into code. Each slide, terminal demo, browser walkthrough,
 and narration is expressed as source files. Courses are updated with a git patch —
 no re-recording needed.
@@ -11,6 +13,8 @@ Built on [Slidev](https://sli.dev) and bundled as a single snap with:
 - **[Piper](https://github.com/rhasspy/piper)** — local text-to-speech
 
 ## Quick Start
+
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/video-course-recorder)
 
 ```bash
 # Build & install the snap
