@@ -40,18 +40,24 @@ const COMMANDS = {
     desc: "Pre-render speech audio for a module",
     usage: "<module> [--locale en] [--model voice.onnx] [--dry-run]",
     moduleAware: true,
+    renderSources: true,
+    cacheDirName: "audio-cache",
   },
   "render-terminal": {
     script: "render-terminal-tapes.js",
     desc: "Pre-render terminal recordings (VHS tape → GIF)",
     usage: "<module> [--locale en] [--format gif|mp4] [--dry-run]",
     moduleAware: true,
+    renderSources: true,
+    cacheDirName: "terminal-cache",
   },
   "render-playwright": {
     script: "render-playwright-videos.js",
     desc: "Pre-render browser recordings (Playwright → WebM)",
     usage: "<module> [--locale en] [--dry-run]",
     moduleAware: true,
+    renderSources: true,
+    cacheDirName: "playwright-cache",
   },
 
   // Build
@@ -85,16 +91,10 @@ const COMMANDS = {
     usage: "<module> [--locale en]",
     moduleAware: true,
   },
-  "record-animated": {
-    script: "record-slidev-animated.js",
-    desc: "Record browser video of Slidev deck with timed transitions",
-    usage: "<module> [--locale en] [--duration=1500ms]",
-    moduleAware: true,
-  },
   "record-video": {
     script: "record-video.js",
-    desc: "Run record-animated and convert WebM to MP4 via ffmpeg",
-    usage: "<module> [--locale en] [--duration=1500ms]",
+    desc: "Record a Slidev deck to WebM or MP4",
+    usage: "<module> [--locale en] [--format webm|mp4] [--duration=1500ms]",
     moduleAware: true,
   },
 
@@ -146,6 +146,36 @@ function parseModuleArgs(args) {
   return { module, locale, rest: filtered };
 }
 
+async function collectSlideMarkdownFiles(entry) {
+  const visited = new Set();
+  const queue = [path.resolve(entry)];
+  const markdownFiles = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (visited.has(current)) continue;
+    visited.add(current);
+    markdownFiles.push(current);
+
+    const markdown = readFileSync(current, "utf8");
+    const frontmatter = /^---\s*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/gm;
+    for (const block of markdown.matchAll(frontmatter)) {
+      for (const line of block[1].split(/\r?\n/)) {
+        const source = line.match(/^\s*src\s*:\s*["']?([^"'#\s]+)["']?\s*(?:#.*)?$/);
+        if (!source) continue;
+        const sourcePath = path.resolve(path.dirname(current), source[1]);
+        if (!/\.md$/i.test(sourcePath) || visited.has(sourcePath)) continue;
+        if (!existsSync(sourcePath)) {
+          throw new Error(`Slide source referenced by ${current} does not exist: ${sourcePath}`);
+        }
+        queue.push(sourcePath);
+      }
+    }
+  }
+
+  return markdownFiles;
+}
+
 // ── Environment setup ──────────────────────────────────────────────────────
 function setupEnvironment() {
   const snapBin = path.join(SNAP, "bin");
@@ -174,8 +204,8 @@ function showHelp() {
     Render: [],
     Build: [],
     Record: [],
-    Operations: ["dev", "validate"],
-    Meta: ["help", "version"],
+    Operations: [],
+    Meta: [],
   };
 
   const groupMap = {
@@ -221,7 +251,7 @@ function showHelp() {
   console.log("  vcr dev ubuntu");
   console.log("  vcr build-slides ubuntu --locale es");
   console.log("  vcr render-audio ubuntu --locale en");
-  console.log("  vcr record-video ubuntu --mux");
+  console.log("  vcr record-video ubuntu --format mp4");
 }
 
 function showVersion() {
@@ -344,13 +374,22 @@ async function main() {
     }
 
     if (cmd.script) {
-      // Forward to script with resolved paths
-      const scriptArgs = [
-        ...parsed.rest,
-        "--file", mod.index,
-        "--cache-dir", path.join(mod.modDir, "audio-cache"),
-      ];
-      return runScript(path.join(SCRIPTS, cmd.script), scriptArgs, { cwd: mod.repo });
+      // Render each markdown source imported by the Slidev entry, not only
+      // index.md. Slidev source decks commonly keep slide content in files
+      // referenced with `src:` frontmatter entries.
+      const markdownFiles = cmd.renderSources
+        ? await collectSlideMarkdownFiles(mod.index)
+        : [mod.index];
+      const cacheDir = path.join(mod.modDir, cmd.cacheDirName ?? "audio-cache");
+      for (const markdownFile of markdownFiles) {
+        const scriptArgs = [
+          ...parsed.rest,
+          "--file", markdownFile,
+          "--cache-dir", cacheDir,
+        ];
+        await runScript(path.join(SCRIPTS, cmd.script), scriptArgs, { cwd: mod.repo });
+      }
+      return;
     }
 
     console.error(`vcr: '${command}' has no executable configured.`);

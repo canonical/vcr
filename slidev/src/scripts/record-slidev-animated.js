@@ -1,8 +1,9 @@
 import { chromium } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { startSlidevServer } from "./slidev-server.js";
 
-const SLIDEV_URL = process.env.SLIDEV_URL ?? "http://localhost:3030";
+const EXTERNAL_SLIDEV_URL = process.env.SLIDEV_URL;
 const OUT_DIR = process.env.VIDEO_OUT_DIR ?? "videos";
 const OUTPUT_NAME = process.env.VIDEO_OUTPUT_NAME ?? "slidev-recording.webm";
 const VIEWPORT = { width: 1920, height: 1080 };
@@ -32,7 +33,13 @@ function parseDuration(value, source) {
 
 function readOption(name) {
   const prefix = `--${name}=`;
-  return process.argv.find(arg => arg.startsWith(prefix))?.slice(prefix.length);
+  const inline = process.argv.find(arg => arg.startsWith(prefix));
+  if (inline) return inline.slice(prefix.length);
+  const index = process.argv.indexOf(`--${name}`);
+  if (index !== -1 && process.argv[index + 1] && !process.argv[index + 1].startsWith("--")) {
+    return process.argv[index + 1];
+  }
+  return undefined;
 }
 
 function readStepDuration() {
@@ -69,168 +76,189 @@ const preciseTiming = await readPreciseDurations();
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
-const beforeRecording = new Set(await fs.readdir(OUT_DIR));
 const outputPath = path.join(OUT_DIR, OUTPUT_NAME);
-await fs.rm(outputPath, { force: true });
+// Record into a private directory on the same filesystem. Publish only after a
+// successful capture so a failed attempt cannot delete/overwrite the old video.
+const recordingDir = await fs.mkdtemp(path.join(OUT_DIR, ".vcr-recording-"));
+let browser;
+let context;
+let slidevServer;
+let slidevUrl = EXTERNAL_SLIDEV_URL;
 
 const SNAP_CHROMIUM_ARGS = process.env.SNAP
   ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-crash-reporter"]
   : [];
-const browser = await chromium.launch({ headless: true, args: SNAP_CHROMIUM_ARGS });
 
-const context = await browser.newContext({
-  viewport: VIEWPORT,
-  recordVideo: {
-    dir: OUT_DIR,
-    size: VIEWPORT
+try {
+  if (!slidevUrl) {
+    const entry = readOption("file") ?? "slides.md";
+    console.error(`Starting local Slidev server for ${path.resolve(entry)}...`);
+    slidevServer = await startSlidevServer(entry);
+    slidevUrl = slidevServer.url;
+    console.error(`Slidev ready at ${slidevUrl}`);
   }
-});
 
-const page = await context.newPage();
-
-await page.goto(SLIDEV_URL, { waitUntil: "networkidle" });
-
-await page.keyboard.press("Home");
-await page.waitForTimeout(ADVANCE_SETTLE_MS);
-
-async function getSlideState() {
-  return page.evaluate(() => {
-    const visible = element => {
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
-    };
-
-    const visibleSlides = Array.from(document.querySelectorAll(".slidev-page, [data-slidev-no]"))
-      .filter(visible)
-      .map(slide => slide.getAttribute("data-slidev-no") ?? slide.id ?? slide.textContent?.trim().slice(0, 80) ?? "")
-      .join("|");
-
-    return `${window.location.href}::${visibleSlides}`;
+  browser = await chromium.launch({ headless: true, args: SNAP_CHROMIUM_ARGS });
+  context = await browser.newContext({
+    viewport: VIEWPORT,
+    recordVideo: {
+      dir: recordingDir,
+      size: VIEWPORT
+    }
   });
-}
 
-async function waitForAnimatedMedia(stepDurationMs) {
-  return page.evaluate(async duration => {
-    const visible = element => {
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
-    };
-
-    const images = Array.from(document.images).filter(visible);
-    await Promise.all(images.map(image => image.decode?.().catch(() => undefined)));
-
-    const imageDuration = Math.max(0, ...images.map(image => readCachedDuration(image)).filter(Number.isFinite));
-    const fallbackDuration = imageDuration || duration;
-
-    const videos = Array.from(document.querySelectorAll("video")).filter(visible);
-
-    if (videos.length === 0) {
-      await new Promise(resolve => window.setTimeout(resolve, fallbackDuration));
-      return { images: images.length, videos: 0, waitedForVideo: false, waitedForImage: imageDuration > 0, duration: fallbackDuration };
-    }
-
-    await Promise.all(videos.map(video => new Promise(resolve => {
-      video.muted = true;
-      video.playsInline = true;
-      video.loop = false;
-
-      const finish = () => {
-        video.removeEventListener("ended", finish);
-        video.removeEventListener("error", finish);
-        resolve();
-      };
-
-      const playToEnd = () => {
-        video.currentTime = 0;
-        video.addEventListener("ended", finish, { once: true });
-        video.addEventListener("error", finish, { once: true });
-        video.play().catch(finish);
-      };
-
-      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        playToEnd();
-        return;
-      }
-
-      video.addEventListener("loadeddata", playToEnd, { once: true });
-      video.load();
-    })));
-
-    return { images: images.length, videos: videos.length, waitedForVideo: true, waitedForImage: false, duration: undefined };
-
-    function readCachedDuration(element) {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT);
-      let previousTerminalComment;
-      let node;
-
-      while ((node = walker.nextNode())) {
-        if (node.nodeType === Node.COMMENT_NODE && node.nodeValue.includes("sli-terminal:start")) {
-          previousTerminalComment = node.nodeValue;
-          continue;
-        }
-
-        if (node === element) {
-          const match = previousTerminalComment?.match(/(?:^|\s)durationMs=(\d+)(?:\s|$)/);
-          return match ? Number.parseInt(match[1], 10) : undefined;
-        }
-      }
-
-      return undefined;
-    }
-  }, stepDurationMs);
-}
-
-let step = 1;
-while (true) {
-  const beforeAdvance = await getSlideState();
-  let media;
-  let waitLabel;
-
-  if (preciseTiming.file) {
-    const duration = preciseTiming.durations[step - 1];
-    if (!duration) {
-      throw new Error(`Missing duration for recording step ${step} in ${preciseTiming.file}`);
-    }
-
-    await page.waitForTimeout(duration);
-    media = { images: 0, videos: 0 };
-    waitLabel = `${duration}ms from ${preciseTiming.file}`;
-  } else {
-    media = await waitForAnimatedMedia(stepDuration);
-    waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;
+  const page = await context.newPage();
+  try {
+    await page.goto(slidevUrl, { waitUntil: "networkidle" });
+  } catch (error) {
+    throw new Error(`Could not open Slidev at ${slidevUrl}: ${error.message}`);
   }
 
-  const mediaLabel = media.images || media.videos ? ` (${media.images} images, ${media.videos} videos)` : "";
-  console.log(`Recording step ${step}${mediaLabel}; waited ${waitLabel}`);
-
-  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Home");
   await page.waitForTimeout(ADVANCE_SETTLE_MS);
 
-  const afterAdvance = await getSlideState();
-  if (afterAdvance === beforeAdvance) {
-    break;
+  async function getSlideState() {
+    return page.evaluate(() => {
+      const visible = element => {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+      };
+
+      const visibleSlides = Array.from(document.querySelectorAll(".slidev-page, [data-slidev-no]"))
+        .filter(visible)
+        .map(slide => slide.getAttribute("data-slidev-no") ?? slide.id ?? slide.textContent?.trim().slice(0, 80) ?? "")
+        .join("|");
+
+      return `${window.location.href}::${visibleSlides}`;
+    });
   }
 
-  step += 1;
+  async function waitForAnimatedMedia(stepDurationMs) {
+    return page.evaluate(async duration => {
+      const visible = element => {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+      };
+
+      const images = Array.from(document.images).filter(visible);
+      await Promise.all(images.map(image => image.decode?.().catch(() => undefined)));
+
+      const imageDuration = Math.max(0, ...images.map(image => readCachedDuration(image)).filter(Number.isFinite));
+      const fallbackDuration = imageDuration || duration;
+
+      const videos = Array.from(document.querySelectorAll("video")).filter(visible);
+
+      if (videos.length === 0) {
+        await new Promise(resolve => window.setTimeout(resolve, fallbackDuration));
+        return { images: images.length, videos: 0, waitedForVideo: false, waitedForImage: imageDuration > 0, duration: fallbackDuration };
+      }
+
+      await Promise.all(videos.map(video => new Promise(resolve => {
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = false;
+
+        const finish = () => {
+          video.removeEventListener("ended", finish);
+          video.removeEventListener("error", finish);
+          resolve();
+        };
+
+        const playToEnd = () => {
+          video.currentTime = 0;
+          video.addEventListener("ended", finish, { once: true });
+          video.addEventListener("error", finish, { once: true });
+          video.play().catch(finish);
+        };
+
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          playToEnd();
+          return;
+        }
+
+        video.addEventListener("loadeddata", playToEnd, { once: true });
+        video.load();
+      })));
+
+      return { images: images.length, videos: videos.length, waitedForVideo: true, waitedForImage: false, duration: undefined };
+
+      function readCachedDuration(element) {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT);
+        let previousTerminalComment;
+        let node;
+
+        while ((node = walker.nextNode())) {
+          if (node.nodeType === Node.COMMENT_NODE && node.nodeValue.includes("sli-terminal:start")) {
+            previousTerminalComment = node.nodeValue;
+            continue;
+          }
+
+          if (node === element) {
+            const match = previousTerminalComment?.match(/(?:^|\s)durationMs=(\d+)(?:\s|$)/);
+            return match ? Number.parseInt(match[1], 10) : undefined;
+          }
+        }
+
+        return undefined;
+      }
+    }, stepDurationMs);
+  }
+
+  let step = 1;
+  while (true) {
+    const beforeAdvance = await getSlideState();
+    let media;
+    let waitLabel;
+
+    if (preciseTiming.file) {
+      const duration = preciseTiming.durations[step - 1];
+      if (!duration) {
+        throw new Error(`Missing duration for recording step ${step} in ${preciseTiming.file}`);
+      }
+
+      await page.waitForTimeout(duration);
+      media = { images: 0, videos: 0 };
+      waitLabel = `${duration}ms from ${preciseTiming.file}`;
+    } else {
+      media = await waitForAnimatedMedia(stepDuration);
+      waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;
+    }
+
+    const mediaLabel = media.images || media.videos ? ` (${media.images} images, ${media.videos} videos)` : "";
+    console.log(`Recording step ${step}${mediaLabel}; waited ${waitLabel}`);
+
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(ADVANCE_SETTLE_MS);
+
+    const afterAdvance = await getSlideState();
+    if (afterAdvance === beforeAdvance) {
+      break;
+    }
+
+    step += 1;
+  }
+
+  await context.close();
+  context = undefined;
+  await browser.close();
+  browser = undefined;
+
+  const files = await fs.readdir(recordingDir);
+  const generatedWebm = files.find(file => file.endsWith(".webm"));
+  if (!generatedWebm) throw new Error("No animated video generated");
+
+  await fs.rename(path.join(recordingDir, generatedWebm), outputPath);
+
+  if (preciseTiming.file && preciseTiming.durations.length > step) {
+    console.warn(`Ignored ${preciseTiming.durations.length - step} unused duration(s) from ${preciseTiming.file}`);
+  }
+
+  console.log(`Recorded WebM: ${outputPath}`);
+} finally {
+  await context?.close().catch(() => {});
+  await browser?.close().catch(() => {});
+  await slidevServer?.stop();
+  await fs.rm(recordingDir, { recursive: true, force: true });
 }
-
-await context.close();
-await browser.close();
-
-const files = await fs.readdir(OUT_DIR);
-const generatedWebm = files.find(file => file.endsWith(".webm") && !beforeRecording.has(file));
-
-if (!generatedWebm) {
-  throw new Error("No animated video generated");
-}
-
-const generatedPath = path.join(OUT_DIR, generatedWebm);
-await fs.rename(generatedPath, outputPath);
-
-if (preciseTiming.file && preciseTiming.durations.length > step) {
-  console.warn(`Ignored ${preciseTiming.durations.length - step} unused duration(s) from ${preciseTiming.file}`);
-}
-
-console.log(`ffmpeg -i ${outputPath} -c:v libx264 -pix_fmt yuv420p -movflags +faststart videos/slidev-recording.mp4`);

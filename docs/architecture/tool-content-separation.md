@@ -73,9 +73,9 @@ slidev build  →  dist/
 ```
 vcr audio:render          →  audio-cache/
 vcr durations:generate    →  durations.txt   (max of audio/terminal/video per slide)
-slidev dev                →  :3030
-vcr record:animated       →  videos/slidev-recording.webm   (Playwright, timed by durations.txt)
-ffmpeg (automated)        →  videos/slidev-recording.mp4
+vcr record-video          →  Slidev starts temporarily, then Playwright records the deck
+  --format webm (default) →  videos/slidev-recording.webm
+  --format mp4            →  videos/slidev-recording.mp4 (ffmpeg conversion)
 ```
 
 **Narration:** Always included — audio plays during Playwright recording and is captured in the WebM.
@@ -139,7 +139,7 @@ Makefile                    ← top-level build targets
     "audio:render":       "vcr audio:render",
     "terminal:render":    "vcr terminal:render",
     "durations:generate": "vcr durations:generate",
-    "record:video":       "vcr record:animated --durations-file=durations.txt",
+    "record:video":       "vcr record-video --format mp4 --durations-file=durations.txt",
     "build:slides":       "vcr build:slides",
     "build:scorm":        "vcr build:scorm",
     "validate":           "vcr validate"

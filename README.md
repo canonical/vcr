@@ -47,6 +47,12 @@ All commands are **module-aware**: they auto-detect a content repo (has `modules
 | `vcr render-terminal <module>` | Pre-render terminal recordings (VHS tape → GIF) |
 | `vcr render-playwright <module>` | Pre-render browser recordings (Playwright → WebM) |
 
+Renderers scan the module entry and its recursively imported Markdown sources (`src:`
+frontmatter). They only create artifacts for matching `speech`/`tts`, `terminal`/`tape`,
+or `playwright` blocks, respectively. Outputs go to `audio-cache/`, `terminal-cache/`,
+and `playwright-cache/` inside the module. If a source contains no matching blocks, VCR
+reports that no artifacts were generated rather than implying files were written.
+
 ### Build (produce artifacts)
 
 | Command | Description |
@@ -56,11 +62,19 @@ All commands are **module-aware**: they auto-detect a content repo (has `modules
 
 ### Record
 
+Recording commands start a temporary local Slidev dev server for the selected module,
+wait until it is ready, record the deck, and stop the server automatically. No separate
+`vcr dev` process is needed. Advanced users can set `SLIDEV_URL` to record from an
+already-running server instead.
+
 | Command | Description |
 |---|---|
-| `vcr generate-durations <module>` | Generate per-slide timing from cached durations |
-| `vcr record-animated <module>` | Record browser video of slides with timed transitions |
-| `vcr record-video <module>` | Record animated + convert to MP4 via FFmpeg |
+| `vcr generate-durations <module> [--fallback 1000] [--padding 500] [--dry-run]` | Generate per-slide timings from cached audio/video/terminal media |
+| `vcr record-video <module> [--format webm|mp4] [--duration=1500ms] [--durations-file=<path>]` | Start Slidev, record the deck in WebM (default) or MP4, then stop Slidev |
+
+`generate-durations` writes `durations.txt` next to the module's `index.md` by default.
+Use `--output <path>` to choose another location. It uses the longest detected media
+length on a slide plus the padding; slides without detected media use the fallback.
 
 ### Operations
 
@@ -72,20 +86,14 @@ All commands are **module-aware**: they auto-detect a content repo (has `modules
 ### Examples
 
 ```bash
-# Develop slides locally
-vcr dev ubuntu
-vcr dev ubuntu --locale es
-
-# Build static site for hosting
-vcr build-slides ubuntu --base /courses/ubuntu/
-
-# Pre-render all assets
-vcr render-audio ubuntu --model en_US-lessac-medium.onnx
-vcr render-terminal ubuntu
-vcr render-playwright ubuntu
-
-# Record final video
+# Start Slidev, record WebM (default), and stop the server automatically
 vcr record-video ubuntu --duration=1500ms
+
+# Choose MP4 instead
+vcr record-video ubuntu --format mp4 --duration=1500ms
+
+# Optional: generate/preview per-slide timing metadata
+vcr generate-durations ubuntu --dry-run
 ```
 
 ## Content Repo Structure

@@ -30,8 +30,11 @@ if (processed.changed && !dryRun) {
 }
 
 console.log(
-  `${dryRun ? "Would update" : "Updated"} ${path.relative(projectRoot, markdownPath)}: ${processed.rendered} rendered, ${processed.reused} reused, ${processed.changed ? "markdown changed" : "markdown unchanged"}`
+  `${dryRun ? "Would update" : "Updated"} ${path.relative(process.cwd(), markdownPath)}: ${processed.rendered} rendered, ${processed.reused} reused, ${processed.changed ? "markdown changed" : "markdown unchanged"}`
 );
+if (processed.rendered === 0 && processed.reused === 0) {
+  console.log(`No terminal blocks found in ${path.relative(process.cwd(), markdownPath)}; ${dryRun ? "no artifacts would be generated" : "no artifacts were generated"}`);
+}
 
 async function renderTerminalBlocks(input) {
   const withoutCached = stripCachedBlocks(input);
