@@ -28,18 +28,22 @@ export async function startSlidevServer(entry, {
 } = {}) {
   const entryPath = path.resolve(entry);
   const port = await reserveLocalPort();
-  const url = `http://127.0.0.1:${port}/`;
+  // Slidev binds to "localhost" by default; probe the same hostname because
+  // localhost may resolve to IPv6 on some runners while 127.0.0.1 does not.
+  const url = `http://localhost:${port}/`;
   const child = spawn(command, [...commandArgs, entryPath, "--port", String(port)], {
     cwd: path.dirname(entryPath),
     env,
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
-  let stderr = "";
-  child.stderr.setEncoding("utf8");
-  child.stderr.on("data", chunk => {
-    stderr = (stderr + chunk).slice(-STDERR_LIMIT);
-  });
+  let output = "";
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.setEncoding("utf8");
+    stream.on("data", chunk => {
+      output = (output + chunk).slice(-STDERR_LIMIT);
+    });
+  }
 
   let spawnError;
   child.once("error", error => { spawnError = error; });
@@ -80,7 +84,7 @@ export async function startSlidevServer(entry, {
       if (spawnError) throw spawnError;
       if (exitInfo) {
         const reason = exitInfo.signal ? `signal ${exitInfo.signal}` : `exit code ${exitInfo.code}`;
-        throw new Error(`Slidev exited before becoming ready (${reason}).${stderr ? `\n${stderr.trim()}` : ""}`);
+        throw new Error(`Slidev exited before becoming ready (${reason}).${output ? `\n${output.trim()}` : ""}`);
       }
 
       try {
@@ -97,7 +101,7 @@ export async function startSlidevServer(entry, {
 
       await Promise.race([delay(READY_POLL_MS), exited]);
     }
-    throw new Error(`Timed out after ${startupTimeoutMs}ms waiting for Slidev at ${url}.${stderr ? `\n${stderr.trim()}` : ""}`);
+    throw new Error(`Timed out after ${startupTimeoutMs}ms waiting for Slidev at ${url}.${output ? `\n${output.trim()}` : ""}`);
   } catch (error) {
     await stop();
     if (spawnError && error === spawnError) {

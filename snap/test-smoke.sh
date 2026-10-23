@@ -371,7 +371,7 @@ trap cleanup_recording_smoke EXIT
 
 assert_record_server_stopped() {
   local log_file="$1" port
-  port=$(grep -oE 'Slidev ready at http://127\.0\.0\.1:[0-9]+' "$log_file" 2>/dev/null | tail -1 | grep -oE '[0-9]+$' || true)
+  port=$(grep -oE 'Slidev ready at http://(localhost|127\.0\.0\.1):[0-9]+' "$log_file" 2>/dev/null | tail -1 | grep -oE '[0-9]+$' || true)
   if [ -z "$port" ]; then
     fail "recording did not report its temporary Slidev server" "see $log_file"
   elif ss -ltn 2>/dev/null | grep -qE ":${port}([[:space:]]|$)"; then
