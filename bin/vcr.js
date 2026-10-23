@@ -42,6 +42,18 @@ const COMMANDS = {
     moduleAware: true,
     renderSources: true,
     cacheDirName: "audio-cache",
+    help: {
+      summary: "Render speech blocks in the module's Markdown sources and insert cached audio references.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--model <path>", "Piper voice model (.onnx); can also be set with PIPER_MODEL. Not needed when ElevenLabs is configured."],
+        ["--tts-bin <command>", "Piper executable (default: piper)."],
+        ["--dry-run", "Report what would change without rendering or writing Markdown."],
+        ["--skip-render", "Write placeholder cache entries and Markdown references without invoking TTS."],
+      ],
+      notes: ["Scans index.md and recursively imported Markdown sources.", "Writes WAV files to modules/<module>/<locale>/audio-cache/ unless ElevenLabs is configured, in which case it writes MP3 files."],
+      examples: ["vcr render-audio ubuntu --model ./voices/en_US-lessac-medium.onnx", "vcr render-audio ubuntu --locale es --dry-run"],
+    },
   },
   "render-terminal": {
     script: "render-terminal-tapes.js",
@@ -50,6 +62,18 @@ const COMMANDS = {
     moduleAware: true,
     renderSources: true,
     cacheDirName: "terminal-cache",
+    help: {
+      summary: "Render terminal/tape blocks with VHS and update the source Markdown with generated media references.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--format <gif|mp4>", "Default format for blocks without their own format= setting (default: gif)."],
+        ["--vhs-bin <command>", "VHS executable (default: vhs)."],
+        ["--dry-run", "Report what would change without recording or writing Markdown."],
+        ["--skip-render", "Write placeholder cache entries and Markdown references without invoking VHS."],
+      ],
+      notes: ["Scans index.md and recursively imported Markdown sources.", "Writes assets to modules/<module>/<locale>/terminal-cache/. Requires VHS; MP4 output also requires ffmpeg."],
+      examples: ["vcr render-terminal ubuntu", "vcr render-terminal ubuntu --format mp4 --dry-run"],
+    },
   },
   "render-playwright": {
     script: "render-playwright-videos.js",
@@ -58,6 +82,16 @@ const COMMANDS = {
     moduleAware: true,
     renderSources: true,
     cacheDirName: "playwright-cache",
+    help: {
+      summary: "Execute Playwright blocks and store browser recordings as WebM.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--dry-run", "Report what would change without launching a browser or writing Markdown."],
+        ["--skip-render", "Write placeholder cache entries and Markdown references without launching a browser."],
+      ],
+      notes: ["Scans index.md and recursively imported Markdown sources.", "Writes WebM assets to modules/<module>/<locale>/playwright-cache/. Block options width= and height= set the viewport (default: 1280×720)."],
+      examples: ["vcr render-playwright ubuntu", "vcr render-playwright ubuntu --locale en --dry-run"],
+    },
   },
 
   // Build
@@ -68,6 +102,16 @@ const COMMANDS = {
     desc: "Build static Slidev SPA for live presenting or web hosting",
     usage: "<module> [--locale en] [--base /subpath]",
     moduleAware: true,
+    help: {
+      summary: "Build a static Slidev site for a module.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--out <dir>, -o <dir>", "Build output directory (default: dist/ inside the module locale directory)."],
+        ["--base <path>", "Public base path when hosting under a URL subpath (for example, /training/)."],
+      ],
+      notes: ["Other Slidev build options are forwarded to Slidev.", "The command reports the output directory after a successful build."],
+      examples: ["vcr build-slides ubuntu", "vcr build-slides ubuntu --base /courses/ubuntu/ --out /tmp/ubuntu-site"],
+    },
   },
   "export-slides": {
     script: null,
@@ -76,12 +120,31 @@ const COMMANDS = {
     desc: "Export slides to PDF/PNG/PPTX/MD",
     usage: "<module> [--locale en] [--format pdf|png|pptx|pptx-editable|md] [--output <path>] [--per-slide] [--dark] [--with-clicks]",
     moduleAware: true,
+    help: {
+      summary: "Export a module's slides to a document or slide images using Slidev export.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--format <format>", "pdf (default), png, pptx, pptx-editable, or md."],
+        ["--output <path>", "Output file or directory. Defaults to <module>-<locale>.<ext> beside index.md."],
+        ["--per-slide", "Export each slide separately."],
+        ["--dark", "Use the dark theme for export."],
+        ["--with-clicks", "Include click/animation steps in the export."],
+      ],
+      notes: ["Other Slidev export options are forwarded to Slidev."],
+      examples: ["vcr export-slides ubuntu", "vcr export-slides ubuntu --format pptx --with-clicks", "vcr export-slides ubuntu --format pdf --output /tmp/ubuntu.pdf"],
+    },
   },
   "build-scorm": {
     desc: "Build SCORM 1.2 ZIP package for LMS delivery",
     usage: "<module> [--locale en]",
     moduleAware: true,
     nyi: true,
+    help: {
+      summary: "Build a SCORM 1.2 package for an LMS. This command is not implemented yet.",
+      options: [["--locale, -l <xx>", "Module locale (default: en)."]],
+      notes: ["This command currently exits with an 'not yet implemented' error."],
+      examples: ["vcr build-scorm ubuntu"],
+    },
   },
 
   // Record
@@ -90,12 +153,37 @@ const COMMANDS = {
     desc: "Generate per-slide timing file from audio/terminal/video durations",
     usage: "<module> [--locale en]",
     moduleAware: true,
+    help: {
+      summary: "Generate per-slide timings from recognized media durations in the module Markdown.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--fallback <ms>", "Duration for slides without detected media (default: 1000; must be positive)."],
+        ["--padding <ms>", "Extra time added after the longest media on a slide (default: 500; may be zero)."],
+        ["--output <path>", "Write timings here (default: durations.txt beside the module entry file)."],
+        ["--dry-run", "Print timing lines without writing the output file."],
+      ],
+      notes: ["Use the generated file with record-video --durations-file <path>."],
+      examples: ["vcr generate-durations ubuntu", "vcr generate-durations ubuntu --fallback 1200 --padding 300 --output /tmp/ubuntu-durations.txt", "vcr generate-durations ubuntu --dry-run"],
+    },
   },
   "record-video": {
     script: "record-video.js",
     desc: "Record a Slidev deck to WebM or MP4",
     usage: "<module> [--locale en] [--format webm|mp4] [--duration=1500ms]",
     moduleAware: true,
+    help: {
+      summary: "Record the module's Slidev deck. A temporary local Slidev server is started unless SLIDEV_URL is set.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--format <webm|mp4>", "Output format (default: webm). MP4 is converted using ffmpeg."],
+        ["--duration <time>", "Time per slide/click step (default: 1000ms; accepts ms or s, e.g. 1500ms or 1.5s)."],
+        ["--step-duration <time>", "Alias for --duration."],
+        ["--durations-file <path>", "Per-step durations file; each non-comment line contains a duration in ms or s."],
+        ["--timings-file <path>", "Alias for --durations-file."],
+      ],
+      notes: ["Per-slide timings are generated automatically from the deck when no timing file or uniform --duration is supplied. Missing media uses the fallback duration.", "Default output is videos/slidev-recording.<format>. Set VIDEO_OUT_DIR and VIDEO_OUTPUT_NAME to override it.", "Set SLIDEV_URL to use an already-running Slidev server."],
+      examples: ["vcr record-video ubuntu", "vcr record-video ubuntu --format mp4 --durations-file durations.txt", "vcr record-video ubuntu --duration 1.5s --format webm"],
+    },
   },
 
   // Dev
@@ -105,22 +193,53 @@ const COMMANDS = {
     desc: "Start Slidev development server for a module",
     usage: "<module> [--locale en] [--port 3030]",
     moduleAware: true,
+    help: {
+      summary: "Start the Slidev development server for a module and stream its output interactively.",
+      options: [
+        ["--locale, -l <xx>", "Module locale (default: en)."],
+        ["--port <number>", "Server port (Slidev default: 3030)."],
+        ["--host <address>", "Bind address (Slidev default: localhost)."],
+        ["--open", "Open the deck in a browser when the server starts, if supported."],
+      ],
+      notes: ["Additional Slidev dev options are forwarded unchanged. Stop the server with Ctrl-C."],
+      examples: ["vcr dev ubuntu", "vcr dev ubuntu --locale es --port 3031"],
+    },
   },
   validate: {
     script: "validate-content.js",
     desc: "Validate course content for correctness",
     usage: "<module> [--locale en]",
     moduleAware: true,
+    help: {
+      summary: "Check a module's content for structural and content errors.",
+      options: [["--locale, -l <xx>", "Module locale (default: en)."]],
+      notes: ["Validation checks depend on the validate-content.js implementation packaged with VCR."],
+      examples: ["vcr validate ubuntu", "vcr validate ubuntu --locale es"],
+    },
   },
 
   // Meta
   help: {
     desc: "Show this help",
     builtin: "help",
+    usage: "[<command>]",
+    help: {
+      summary: "Show the command list, or detailed help for a named command.",
+      options: [],
+      notes: ["Use vcr help <command> or vcr <command> --help for command-specific details."],
+      examples: ["vcr help", "vcr help render-audio"],
+    },
   },
   version: {
     desc: "Show version information",
     builtin: "version",
+    usage: "",
+    help: {
+      summary: "Print the installed VCR version.",
+      options: [],
+      notes: [],
+      examples: ["vcr version", "vcr --version"],
+    },
   },
 };
 
@@ -246,12 +365,41 @@ function showHelp() {
   console.log("  --locale, -l <xx>   Locale code (default: en)");
   console.log("  --help              Show this help");
   console.log("  --version           Show version\n");
-  console.log("Use 'vcr <command> --help' for command-specific options.");
+  console.log("Use 'vcr <command> --help' or 'vcr help <command>' for detailed command help.");
   console.log("\nExamples:");
   console.log("  vcr dev ubuntu");
   console.log("  vcr build-slides ubuntu --locale es");
   console.log("  vcr render-audio ubuntu --locale en");
   console.log("  vcr record-video ubuntu --format mp4");
+}
+
+function showCommandHelp(name, cmd) {
+  if (!cmd.help) {
+    console.error(`vcr: no detailed help is available for '${name}'.`);
+    console.error("Run 'vcr --help' to see available commands.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const details = cmd.help;
+  console.log(`Usage: vcr ${name} ${cmd.usage ?? ""}`.trimEnd());
+  console.log(`\n${details.summary}`);
+  if (details.options?.length) {
+    console.log("\nOptions:");
+    const width = Math.max(...details.options.map(([option]) => option.length));
+    for (const [option, description] of details.options) {
+      console.log(`  ${option.padEnd(width + 2)}${description}`);
+    }
+  }
+  if (details.notes?.length) {
+    console.log("\nNotes:");
+    for (const note of details.notes) console.log(`  - ${note}`);
+  }
+  if (details.examples?.length) {
+    console.log("\nExamples:");
+    for (const example of details.examples) console.log(`  ${example}`);
+  }
+  console.log("\nUse 'vcr --help' to see all commands.");
 }
 
 function showVersion() {
@@ -267,8 +415,20 @@ function showVersion() {
 async function main() {
   const args = process.argv.slice(2);
 
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
     return showHelp();
+  }
+  if (args[0] === "help") {
+    if (!args[1] || args[1] === "--help" || args[1] === "-h") return showHelp();
+    const target = args[1];
+    const targetCommand = COMMANDS[target] ?? COMMANDS[target.replace(":", "-")];
+    if (!targetCommand) {
+      console.error(`vcr help: unknown command '${target}'.`);
+      console.error("Run 'vcr --help' to see available commands.");
+      process.exitCode = 1;
+      return;
+    }
+    return showCommandHelp(target.replace(":", "-"), targetCommand);
   }
   if (args[0] === "--version" || args[0] === "-v") {
     return showVersion();
@@ -284,6 +444,7 @@ async function main() {
     process.exit(1);
   }
 
+  if (rest.includes("--help") || rest.includes("-h")) return showCommandHelp(command.replace(":", "-"), cmd);
   if (cmd.builtin === "help") return showHelp();
   if (cmd.builtin === "version") return showVersion();
   if (cmd.nyi) {
@@ -299,8 +460,10 @@ async function main() {
 
     if (!parsed.module) {
       console.error(`vcr ${command}: module name is required.`);
-      console.error(`Usage: vcr ${command} <module> [--locale <xx>]`);
-      process.exit(1);
+      console.error("");
+      showCommandHelp(command.replace(":", "-"), cmd);
+      process.exitCode = 1;
+      return;
     }
 
     const mod = resolveModule({ module: parsed.module, locale: parsed.locale });

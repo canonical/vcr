@@ -104,21 +104,24 @@ fi
 echo ""
 
 # ── 4b. Packaged recording regression tests ────────────────────────────
-echo "[4b] Packaged recording regression tests"
+echo "[4b] Packaged recording and automatic-duration regression tests"
 TEST_LOG="/tmp/vcr-recording-tests.log"
 if [ -s "$SNAP_ROOT/scripts/generate-durations.test.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/recording-durations.js" ] \
+    && [ -s "$SNAP_ROOT/scripts/recording-durations.test.js" ] \
     && [ -s "$SNAP_ROOT/scripts/slidev-server.test.js" ] \
     && [ -s "$SNAP_ROOT/scripts/record-video.test.js" ] \
     && [ -s "$SNAP_ROOT/scripts/cli-render.test.js" ] \
     && "$SNAP_NODE" --test \
       "$SNAP_ROOT/scripts/generate-durations.test.js" \
+      "$SNAP_ROOT/scripts/recording-durations.test.js" \
       "$SNAP_ROOT/scripts/slidev-server.test.js" \
       "$SNAP_ROOT/scripts/record-video.test.js" \
       "$SNAP_ROOT/scripts/cli-render.test.js" >"$TEST_LOG" 2>&1; then
   pass "packaged CLI and recording regression tests pass"
 else
   echo "----- $TEST_LOG (tail) -----"; tail -60 "$TEST_LOG" 2>/dev/null || true; echo "-----"
-  fail "packaged recording regression tests failed or are missing" "see $TEST_LOG and rebuild the snap from this checkout"
+  fail "packaged recording or automatic-timing regression tests failed or are missing" "see $TEST_LOG and rebuild the snap from this checkout"
 fi
 echo ""
 
@@ -355,16 +358,16 @@ echo ""
 
 # ── 11. Real partner-enablement deck recording (WebM, automatic Slidev) ──
 echo "[11] Partner-enablement recording (record-video --format webm)"
-RECORD_TMP="$(mktemp -d "${TMPDIR:-/tmp}/vcr-partner-record-smoke.XXXXXX")"
+# Keep outputs in the shared home-mounted content checkout. Snap's private /tmp
+# namespace cannot see host-created timing files or expose output files back here.
+RECORD_TMP="$(mktemp -d "$CONTENT_REPO/vcr-partner-record-smoke.XXXXXX")"
 RENDER_SMOKE_DIR=""
 cleanup_recording_smoke() {
   [ -z "$RECORD_TMP" ] || rm -rf "$RECORD_TMP"
   [ -z "$RENDER_SMOKE_DIR" ] || rm -rf "$RENDER_SMOKE_DIR"
 }
 trap cleanup_recording_smoke EXIT
-DURATIONS_FILE="$RECORD_TMP/durations.txt"
-# Keep this integration test short while still driving every slide/click step.
-for _ in $(seq 1 500); do echo 100; done > "$DURATIONS_FILE"
+# The recorder generates slide timings inside its own confined temporary directory.
 
 assert_record_server_stopped() {
   local log_file="$1" port
@@ -382,12 +385,15 @@ if [ ! -s "$CONTENT_REPO/modules/ubuntu/en/index.md" ]; then
   fail "partner-enablement Ubuntu deck is unavailable" \
        "expected $CONTENT_REPO/modules/ubuntu/en/index.md; set VCR_SMOKE_CONTENT_REPO to the existing clone"
 else
-  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL \
+  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL -u RECORD_VIDEO_DURATIONS_FILE -u ANIMATED_STEP_DURATION_MS \
       VIDEO_OUT_DIR="$RECORD_TMP/animated" \
       VIDEO_OUTPUT_NAME=partner-ubuntu-webm.webm \
-      vcr record-video ubuntu --locale en --format webm --durations-file="$DURATIONS_FILE" \
+      vcr record-video ubuntu --locale en --format webm \
       >/tmp/vcr-record-smoke.log 2>&1); then
     REC="$RECORD_TMP/animated/partner-ubuntu-webm.webm"
+    if ! grep -q "Generated per-slide recording timings" /tmp/vcr-record-smoke.log; then
+      fail "record-video did not generate timings automatically" "see /tmp/vcr-record-smoke.log"
+    fi
     if [ -s "$REC" ] && [ ! -e "$RECORD_TMP/animated/partner-ubuntu-webm.mp4" ]; then
       pass "record-video --format webm captured partner-enablement Ubuntu deck ($(wc -c < "$REC") bytes)"
     else
@@ -405,12 +411,15 @@ echo ""
 # ── 12. Partner-enablement deck recording (MP4) ─────────────────────────
 echo "[12] Partner-enablement recording (record-video --format mp4)"
 if [ -s "$CONTENT_REPO/modules/ubuntu/en/index.md" ]; then
-  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL \
+  if (cd "$CONTENT_REPO" && env -u SLIDEV_URL -u RECORD_VIDEO_DURATIONS_FILE -u ANIMATED_STEP_DURATION_MS \
       VIDEO_OUT_DIR="$RECORD_TMP/video" \
       VIDEO_OUTPUT_NAME=partner-ubuntu-video.webm \
-      vcr record-video ubuntu --locale en --format=mp4 --durations-file="$DURATIONS_FILE" \
+      vcr record-video ubuntu --locale en --format=mp4 \
       >/tmp/vcr-record-vid-smoke.log 2>&1); then
     MP4="$RECORD_TMP/video/partner-ubuntu-video.mp4"
+    if ! grep -q "Generated per-slide recording timings" /tmp/vcr-record-vid-smoke.log; then
+      fail "record-video did not generate timings automatically for MP4" "see /tmp/vcr-record-vid-smoke.log"
+    fi
     if [ -s "$MP4" ] && [ ! -e "$RECORD_TMP/video/partner-ubuntu-video.webm" ]; then
       pass "record-video --format mp4 captured partner-enablement Ubuntu deck ($(wc -c < "$MP4") bytes)"
     else

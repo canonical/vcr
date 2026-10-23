@@ -36,6 +36,8 @@ execute: |
   check "playwright-browsers" "Playwright + Chromium browsers"
   check "scripts/generate-durations.js" "per-slide duration generator"
   check "scripts/generate-durations.test.js" "duration generator regression tests"
+  check "scripts/recording-durations.js" "automatic recording duration helper"
+  check "scripts/recording-durations.test.js" "automatic recording duration regression tests"
   check "scripts/slidev-server.js" "managed Slidev server helper"
   check "scripts/slidev-server.test.js" "managed Slidev server regression tests"
   check "scripts/record-video.test.js" "recording format regression tests"
@@ -75,15 +77,16 @@ execute: |
 
   SNAP_ROOT=$(readlink -f /snap/video-course-recorder/current)
   echo ""
-  echo "=== Packaged CLI and recording regression tests ==="
+  echo "=== Packaged CLI render, recording, and timing regression tests ==="
   if "$SNAP_ROOT/bin/node" --test \
       "$SNAP_ROOT/scripts/generate-durations.test.js" \
+      "$SNAP_ROOT/scripts/recording-durations.test.js" \
       "$SNAP_ROOT/scripts/slidev-server.test.js" \
       "$SNAP_ROOT/scripts/record-video.test.js" \
       "$SNAP_ROOT/scripts/cli-render.test.js"; then
-    echo "  PASS: packaged CLI and recording tests"
+    echo "  PASS: packaged CLI render, recording, and timing tests"
   else
-    echo "  FAIL: packaged CLI and recording tests"
+    echo "  FAIL: packaged CLI render, recording, and timing tests"
     exit 1
   fi
 

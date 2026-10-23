@@ -70,7 +70,11 @@ already-running server instead.
 | Command | Description |
 |---|---|
 | `vcr generate-durations <module> [--fallback 1000] [--padding 500] [--dry-run]` | Generate per-slide timings from cached audio/video/terminal media |
-| `vcr record-video <module> [--format webm|mp4] [--duration=1500ms] [--durations-file=<path>]` | Start Slidev, record the deck in WebM (default) or MP4, then stop Slidev |
+| `vcr record-video <module> [--format webm|mp4] [--duration=1500ms] [--durations-file=<path>]` | Generate per-slide timings automatically unless overridden, then record the deck in WebM (default) or MP4 |
+
+Use `vcr <command> --help` (or `vcr help <command>`) for command-specific flag
+reference, defaults, output details, and examples. For example, `vcr export-slides
+--help` explains the export formats and destination options.
 
 `generate-durations` writes `durations.txt` next to the module's `index.md` by default.
 Use `--output <path>` to choose another location. It uses the longest detected media
@@ -86,7 +90,10 @@ length on a slide plus the padding; slides without detected media use the fallba
 ### Examples
 
 ```bash
-# Start Slidev, record WebM (default), and stop the server automatically
+# Generate per-slide timings from the deck, record WebM, and stop the server automatically
+vcr record-video ubuntu
+
+# Use a uniform step duration instead of generated per-slide timings
 vcr record-video ubuntu --duration=1500ms
 
 # Choose MP4 instead

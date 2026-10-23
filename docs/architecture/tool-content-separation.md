@@ -72,15 +72,15 @@ slidev build  →  dist/
 **Pipeline:**
 ```
 vcr audio:render          →  audio-cache/
-vcr durations:generate    →  durations.txt   (max of audio/terminal/video per slide)
-vcr record-video          →  Slidev starts temporarily, then Playwright records the deck
+vcr record-video          →  generate per-slide timings if none were provided, start Slidev temporarily, then record the deck
+vcr durations:generate    →  durations.txt   (optional preview/custom timing file: max of audio/terminal/video per slide)
   --format webm (default) →  videos/slidev-recording.webm
   --format mp4            →  videos/slidev-recording.mp4 (ffmpeg conversion)
 ```
 
 **Narration:** Always included — audio plays during Playwright recording and is captured in the WebM.
 
-**Timing:** `durations.txt` drives transitions. Each slide duration = max(audio_duration, terminal_tape_duration, video_duration) + 500ms padding. Silent slides default to 1000ms (matches `DEFAULT_STEP_DURATION_MS`).
+**Timing:** When no `--durations-file` or uniform `--duration` is supplied, the recorder generates an internal timing file from the entry deck and recursively imported Markdown. Each slide duration = max(available audio, terminal, and video duration) + 500ms padding. Silent slides and missing media default to 1000ms. `vcr generate-durations` remains available for previewing or creating a reusable custom file.
 
 **Resolution:** 1920×1080 (hardcoded viewport in `record-slidev-animated.js`).
 

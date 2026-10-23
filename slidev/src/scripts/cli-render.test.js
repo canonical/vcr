@@ -71,3 +71,45 @@ test("render commands visit imported markdown and use their own media caches", a
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
 });
+
+
+test("every command supports detailed help without requiring a content module", () => {
+  const commands = [
+    "render-audio", "render-terminal", "render-playwright",
+    "build-slides", "export-slides", "build-scorm",
+    "generate-durations", "record-video", "dev", "validate",
+  ];
+  for (const command of commands) {
+    for (const helpArgs of [[command, "--help"], ["help", command]]) {
+      const result = spawnSync(process.execPath, [cli, ...helpArgs], { encoding: "utf8" });
+      assert.equal(result.status, 0, `${helpArgs.join(" ")}: ${result.stderr}`);
+      assert.match(result.stdout, new RegExp(`Usage: vcr ${command}\\b`));
+      assert.doesNotMatch(result.stdout, /undefined|module name is required/);
+      assert.match(result.stdout, /Options:/);
+      assert.match(result.stdout, /Examples:/);
+    }
+  }
+});
+
+test("supports short help aliases and reports unknown help targets", () => {
+  const short = spawnSync(process.execPath, [cli, "record-video", "-h"], { encoding: "utf8" });
+  assert.equal(short.status, 0, short.stderr);
+  assert.match(short.stdout, /--format <webm\|mp4>/);
+
+  const unknown = spawnSync(process.execPath, [cli, "help", "not-a-command"], { encoding: "utf8" });
+  assert.notEqual(unknown.status, 0);
+  assert.match(unknown.stderr, /unknown command 'not-a-command'/);
+});
+
+
+test("missing module prints the command's expanded usage and flags", () => {
+  const result = spawnSync(process.execPath, [cli, "render-audio"], { encoding: "utf8" });
+  assert.notEqual(result.status, 0);
+  const output = `${result.stderr}${result.stdout}`;
+  assert.match(output, /module name is required/);
+  assert.match(output, /Usage: vcr render-audio <module>/);
+  assert.match(output, /--model <path>/);
+  assert.match(output, /--dry-run/);
+  assert.match(output, /Examples:/);
+  assert.doesNotMatch(output, /Usage: vcr render-audio <module> \[--locale <xx>\]/);
+});

@@ -1,7 +1,9 @@
 import { chromium } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { startSlidevServer } from "./slidev-server.js";
+import { prepareRecordingDurations } from "./recording-durations.js";
 
 const EXTERNAL_SLIDEV_URL = process.env.SLIDEV_URL;
 const OUT_DIR = process.env.VIDEO_OUT_DIR ?? "videos";
@@ -51,8 +53,8 @@ function readStepDuration() {
     ?? DEFAULT_STEP_DURATION_MS;
 }
 
-async function readPreciseDurations() {
-  const durationsFile = readOption("durations-file") ?? readOption("timings-file") ?? process.env.RECORD_VIDEO_DURATIONS_FILE;
+async function readPreciseDurations(generatedTiming) {
+  const durationsFile = generatedTiming?.file ?? readOption("durations-file") ?? readOption("timings-file") ?? process.env.RECORD_VIDEO_DURATIONS_FILE;
   if (!durationsFile) {
     return { file: undefined, durations: [] };
   }
@@ -68,12 +70,10 @@ async function readPreciseDurations() {
     throw new Error(`${durationsFile} must contain at least one duration`);
   }
 
-  return { file: durationsFile, durations };
+  return { file: durationsFile, durations, generated: Boolean(generatedTiming?.generated) };
 }
 
 const stepDuration = readStepDuration();
-const preciseTiming = await readPreciseDurations();
-
 await fs.mkdir(OUT_DIR, { recursive: true });
 
 const outputPath = path.join(OUT_DIR, OUTPUT_NAME);
@@ -84,12 +84,24 @@ let browser;
 let context;
 let slidevServer;
 let slidevUrl = EXTERNAL_SLIDEV_URL;
+let preciseTiming;
 
 const SNAP_CHROMIUM_ARGS = process.env.SNAP
   ? ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-crash-reporter"]
   : [];
 
 try {
+  const entry = readOption("file") ?? "slides.md";
+  const generatedTiming = await prepareRecordingDurations({
+    entryFile: path.resolve(entry),
+    outputDir: recordingDir,
+    generatorFile: fileURLToPath(new URL("./generate-durations.js", import.meta.url)),
+  });
+  if (generatedTiming?.generated) {
+    console.error(`Generated per-slide recording timings from ${path.resolve(entry)}.`);
+  }
+  preciseTiming = await readPreciseDurations(generatedTiming);
+
   if (!slidevUrl) {
     const entry = readOption("file") ?? "slides.md";
     console.error(`Starting local Slidev server for ${path.resolve(entry)}...`);
@@ -213,14 +225,15 @@ try {
     let waitLabel;
 
     if (preciseTiming.file) {
-      const duration = preciseTiming.durations[step - 1];
-      if (!duration) {
+      let duration = preciseTiming.durations[step - 1];
+      if (!duration && !preciseTiming.generated) {
         throw new Error(`Missing duration for recording step ${step} in ${preciseTiming.file}`);
       }
+      if (!duration) duration = stepDuration;
 
       await page.waitForTimeout(duration);
       media = { images: 0, videos: 0 };
-      waitLabel = `${duration}ms from ${preciseTiming.file}`;
+      waitLabel = `${duration}ms from ${preciseTiming.generated && step > preciseTiming.durations.length ? "default extra-step fallback" : preciseTiming.file}`;
     } else {
       media = await waitForAnimatedMedia(stepDuration);
       waitLabel = media.waitedForVideo ? "video duration" : media.waitedForImage ? `${media.duration}ms image metadata` : `${stepDuration}ms`;

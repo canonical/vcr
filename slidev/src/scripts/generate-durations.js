@@ -59,6 +59,36 @@ async function parseSlides(file) {
   return slides;
 }
 
+async function collectSlides(file, visited = new Set()) {
+  const absolute = path.resolve(file);
+  if (visited.has(absolute)) return [];
+  visited.add(absolute);
+
+  const text = await fs.readFile(absolute, "utf8");
+  const frontmatterPattern = /^---\s*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/gm;
+  const frontmatterBlocks = [...text.matchAll(frontmatterPattern)];
+  const sourcePaths = [];
+  for (const block of frontmatterBlocks) {
+    for (const line of block[1].split(/\r?\n/)) {
+      const source = line.match(/^\s*src\s*:\s*["']?([^"'#\s]+)["']?\s*(?:#.*)?$/);
+      if (!source) continue;
+      sourcePaths.push(path.resolve(path.dirname(absolute), source[1]));
+    }
+  }
+
+  const content = text.replace(frontmatterPattern, "").replace(/^\s*---\s*$/gm, "");
+  const slides = [];
+  // A src-only index file is a deck manifest, not a slide of its own.
+  if (!sourcePaths.length || content.trim()) {
+    slides.push(...(await parseSlides(absolute)).map(markdown => ({ markdown, file: absolute })));
+  }
+  for (const sourcePath of sourcePaths) {
+    if (!/\.md$/i.test(sourcePath)) continue;
+    slides.push(...await collectSlides(sourcePath, visited));
+  }
+  return slides;
+}
+
 const audioSource = /<audio\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i;
 const videoSources = /<video\b[^>]*(?<!:)\bsrc=["']([^"']+)["'][^>]*>/gi;
 const terminalDurations = /<!--\s*sli-terminal:start\b[^>]*?durationMs=(\d+)/g;
@@ -75,24 +105,31 @@ async function probeDurationMs(file) {
   return Math.ceil(seconds * 1000);
 }
 
-const slides = await parseSlides(markdownPath);
+const slides = await collectSlides(markdownPath);
 if (slides.length === 0) throw new Error(`No slides found in ${markdownPath}`);
 console.log(`Parsed ${slides.length} slides from ${markdownPath}`);
 
 const durations = [];
 let withMedia = 0;
 for (let index = 0; index < slides.length; index++) {
-  const slide = slides[index];
+  const { markdown: slide, file: slideFile } = slides[index];
   const candidates = [];
   const audio = audioSource.exec(slide)?.[1];
-  if (audio) candidates.push({ label: `audio:${path.basename(audio)}`, ms: await probeDurationMs(path.resolve(path.dirname(markdownPath), audio)) });
+  if (audio) {
+    const mediaPath = path.resolve(path.dirname(slideFile), audio);
+    try {
+      candidates.push({ label: `audio:${path.basename(audio)}`, ms: await probeDurationMs(mediaPath) });
+    } catch (error) {
+      console.warn(`Slide ${index + 1}: skipping audio probe for ${mediaPath}: ${error.message}`);
+    }
+  }
 
   for (const match of slide.matchAll(terminalDurations)) {
     candidates.push({ label: `terminal:${match[1]}ms`, ms: Number.parseInt(match[1], 10) });
   }
 
   for (const match of slide.matchAll(videoSources)) {
-    const mediaPath = path.resolve(path.dirname(markdownPath), match[1]);
+    const mediaPath = path.resolve(path.dirname(slideFile), match[1]);
     try {
       candidates.push({ label: `video:${path.basename(mediaPath)}`, ms: await probeDurationMs(mediaPath) });
     } catch (error) {
