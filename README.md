@@ -14,7 +14,9 @@ Built on [Slidev](https://sli.dev) and bundled as a single snap with:
 
 ## Quick Start
 
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/video-course-recorder)
+<a href="https://snapcraft.io/video-course-recorder">
+   <img alt="Get it from the Snap Store" src=https://snapcraft.io/en/dark/install.svg width="200" />
+</a>
 
 ```bash
 # Build & install the snap
