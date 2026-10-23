@@ -13,7 +13,7 @@ description: |
   - Browser recordings via Playwright (render-playwright)
   - Speech synthesis via Piper (local) or ElevenLabs (cloud) (render-audio)
   - Timed MP4 video generation (record-video)
-  - SCORM 1.2 packages for LMS delivery (build-scorm)
+  - SCORM 1.2 packaging planned (build-scorm is not implemented yet)
   - Static site generation for live presenting (build-slides)
 
 grade: stable
