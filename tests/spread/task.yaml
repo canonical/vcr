@@ -152,4 +152,18 @@ execute: |
     exit 1
   fi
 
+  echo ""
+  echo "=== PDF export under strict confinement ==="
+  if ! (cd "$SMOKE_PROJ" && vcr export-slides spreadsmoke) >/tmp/vcr-export-slides.log 2>&1; then
+    cat /tmp/vcr-export-slides.log
+    exit 1
+  fi
+  PDF="$SMOKE_PROJ/modules/spreadsmoke/en/spreadsmoke-en.pdf"
+  if [ "$(head -c 5 "$PDF")" != "%PDF-" ]; then
+    echo "  FAIL: expected a PDF at $PDF"
+    cat /tmp/vcr-export-slides.log
+    exit 1
+  fi
+  echo "  PASS: exported $PDF"
+
   echo "=== All checks passed ==="

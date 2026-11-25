@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -125,7 +125,7 @@ const COMMANDS = {
       options: [
         ["--locale, -l <xx>", "Module locale (default: en)."],
         ["--format <format>", "pdf (default), png, pptx, pptx-editable, or md."],
-        ["--output <path>", "Output file or directory. Defaults to <module>-<locale>.<ext> beside index.md."],
+        ["--output <path>", "Output file or directory. Relative paths are resolved beside index.md. PDF filenames get a .pdf suffix if omitted."],
         ["--per-slide", "Export each slide separately."],
         ["--dark", "Use the dark theme for export."],
         ["--with-clicks", "Include click/animation steps in the export."],
@@ -305,7 +305,7 @@ function setupEnvironment() {
       .join(":");
   }
 
-  if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+  if (process.env.SNAP && !process.env.PLAYWRIGHT_BROWSERS_PATH) {
     process.env.PLAYWRIGHT_BROWSERS_PATH = path.join(SNAP, "playwright-browsers");
   }
 
@@ -496,24 +496,35 @@ async function main() {
       } else if (cmd.execSub === "export") {
         // Default output next to the module; user can override with --output
         let userOut = null;
+        const exportArgs = [];
         for (let i = 0; i < parsed.rest.length; i++) {
-          if (parsed.rest[i] === "--output") userOut = parsed.rest[i + 1] ?? userOut;
-          else if (parsed.rest[i].startsWith("--output=")) userOut = parsed.rest[i].split("=")[1];
+          const arg = parsed.rest[i];
+          if (arg === "--output") {
+            userOut = parsed.rest[++i];
+            if (!userOut || userOut.startsWith("--")) throw new Error("--output requires a path");
+          } else if (arg.startsWith("--output=")) {
+            userOut = arg.slice("--output=".length);
+            if (!userOut) throw new Error("--output requires a path");
+          } else {
+            exportArgs.push(arg);
+          }
         }
-        let fmt = "pdf";
-        for (let i = 0; i < parsed.rest.length; i++) {
-          if (parsed.rest[i] === "--format") fmt = parsed.rest[i + 1] ?? fmt;
-          else if (parsed.rest[i].startsWith("--format=")) fmt = parsed.rest[i].split("=")[1];
+        let format;
+        for (let i = 0; i < exportArgs.length; i++) {
+          if (exportArgs[i] === "--format") format = exportArgs[i + 1] ?? "";
+          else if (exportArgs[i].startsWith("--format=")) format = exportArgs[i].slice("--format=".length);
         }
-        const extMap = { pdf: "pdf", png: "png", pptx: "pptx", "pptx-editable": "pptx", md: "md" };
-        const ext = extMap[fmt] ?? "pdf";
-        if (userOut) {
-          outPath = path.resolve(mod.modDir, userOut);
-          execArgs = ["export", mod.index, ...parsed.rest];
-        } else {
-          outPath = path.join(mod.modDir, `${mod.module}-${mod.locale}.${ext}`);
-          execArgs = ["export", mod.index, "--output", outPath, ...parsed.rest];
+        if (format === undefined) {
+          format = "pdf";
+          exportArgs.push("--format", format);
         }
+        const extension = format === "pptx-editable" ? "pptx" : format;
+        outPath = path.resolve(mod.modDir, userOut ?? `${mod.module}-${mod.locale}.${extension}`);
+        if (format === "pdf") {
+          if (!outPath.endsWith(".pdf")) outPath += ".pdf";
+          mkdirSync(path.dirname(outPath), { recursive: true });
+        }
+        execArgs = ["export", mod.index, "--output", outPath, ...exportArgs];
       } else if (cmd.execSub) {
         execArgs = [cmd.execSub, mod.index, ...parsed.rest];
       } else {
