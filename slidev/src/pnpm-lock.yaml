@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@slidev/cli':
         specifier: ^52.16.0
-        version: 52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)
+        version: 52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(playwright-chromium@1.61.0)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)
       '@slidev/theme-default':
         specifier: latest
         version: 0.25.0
@@ -26,6 +26,9 @@ importers:
         version: 1.61.0
       playwright:
         specifier: ^1.61.0
+        version: 1.61.0
+      playwright-chromium:
+        specifier: 1.61.0
         version: 1.61.0
 
 packages:
@@ -2534,6 +2537,11 @@ packages:
   plantuml-encoder@1.4.0:
     resolution: {integrity: sha512-sxMwpDw/ySY1WB2CE3+IdMuEcWibJ72DDOsXLkSmEaSzwEUaYBT6DWgOfBiHGCux4q433X6+OEFWjlVqp7gL6g==}
 
+  playwright-chromium@1.61.0:
+    resolution: {integrity: sha512-7gZbsqqLT4WSeK/DUrsAFFvPdzP3Bh3kn9sK+YLZ9Q2e6CB+vd0TeqHvmkPQKK2IyXhPNGx5DV0YbEP6sTFBHA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   playwright-core@1.61.0:
     resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
     engines: {node: '>=18'}
@@ -3869,7 +3877,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@slidev/cli@52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)':
+  '@slidev/cli@52.16.0(@nuxt/kit@3.21.8)(@types/markdown-it@14.1.2)(@types/node@22.19.21)(@vue/compiler-sfc@3.5.38)(lightningcss@1.32.0)(markdown-it@14.3.2)(playwright-chromium@1.61.0)(postcss@8.5.15)(rolldown@1.0.3)(supports-color@10.2.2)':
     dependencies:
       '@antfu/ni': 30.1.0
       '@antfu/utils': 9.3.0
@@ -3942,6 +3950,8 @@ snapshots:
       vue: 3.5.38(typescript@6.0.3)
       yaml: 2.9.0
       yargs: 18.0.0
+    optionalDependencies:
+      playwright-chromium: 1.61.0
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
       - '@nuxt/kit'
@@ -6064,6 +6074,10 @@ snapshots:
       pathe: 2.0.3
 
   plantuml-encoder@1.4.0: {}
+
+  playwright-chromium@1.61.0:
+    dependencies:
+      playwright-core: 1.61.0
 
   playwright-core@1.61.0: {}
 

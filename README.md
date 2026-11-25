@@ -73,6 +73,25 @@ reports that no artifacts were generated rather than implying files were written
 | `vcr export-slides <module> [--format pdf|png|pptx|pptx-editable|md]` | Export slides to PDF, images, PowerPoint, or Markdown |
 | `vcr build-scorm <module>` | Planned; currently exits with a not-implemented error |
 
+Run `vcr export-slides ubuntu` to generate `modules/ubuntu/en/ubuntu-en.pdf`.
+Use `--locale` to export another locale and `--output` to choose a filename.
+Relative output paths are resolved from the module's locale directory, and VCR
+adds the `.pdf` extension if omitted.
+
+```bash
+vcr export-slides ubuntu --output handouts/ubuntu
+```
+
+The snap bundles Chromium for PDF export. To test PDF export from a source
+checkout, run `pnpm install` in the checkout's `slidev/src` directory.
+Then run the CLI from your content repository.
+
+```bash
+VCR_CHECKOUT=/path/to/vcr
+PATH="$VCR_CHECKOUT/slidev/src/node_modules/.bin:$PATH" \
+  node "$VCR_CHECKOUT/bin/vcr.js" export-slides ubuntu
+```
+
 ### Record
 
 Recording commands start a temporary local Slidev dev server for the selected module,
